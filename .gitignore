@@ -1,0 +1,129 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+ENV/
+env/
+.venv/
+rl_highway_env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# macOS and Windows system files
+.DS_Store
+Thumbs.db
+
+# Python egg files
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+
+# Test and coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+.pytest_cache/
+
+# Local environment variables
+.env
+.env.*
+
+# ===== RL & Highway-Env Specific =====
+
+# Trained models and checkpoints (these are large files)
+models/
+checkpoints/
+saved_models/
+*.h5
+*.pkl
+*.pth
+*.ckpt
+*.zip
+
+# TensorBoard logs (can regenerate)
+tensorboard/
+runs/
+logs/
+
+# Training data and results
+data/
+results/
+experiments/
+*.csv
+*.npy
+*.npz
+
+# ===== Pygame & Gymnasium =====
+
+# Pygame compiled files
+*.so
+*.dylib
+*.dll
+
+# ===== Video Files (Important Exception!) =====
+
+# Temporary video recordings during training
+videos/temp/
+recordings/temp/
+
+# KEEP the final evolution video for GitHub
+# !evolution.mp4
+# !evolution.gif
+# Uncomment above lines when you have your final video
+
+# But ignore all other videos
+*.mp4
+*.avi
+*.mov
+
+# ===== Matplotlib =====
+
+# Matplotlib cache
+.matplotlib/
+
+# Generated plots (can regenerate from code)
+plots/temp/
+figures/temp/
+
+# KEEP final plots for README
+# !plots/training_curve.png
+# !plots/reward_analysis.png
+# Uncomment when you have final plots
+
+# ===== Project Specific =====
+
+# Temporary experiment files
+experiments/
+tmp/
+temp/
+
+# Large dataset files
+*.tar.gz
+*.zip
+
+# IDE specific
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== IMPORTANT: Files to KEEP =====
+# When ready, uncomment these to include in Git:
+# !evolution.mp4           <- Your 3-stage video
+# !evolution.gif           <- Alternative GIF version
+# !plots/final_*.png       <- Your training graphs
+# !requirements.txt        <- Always keep this!
+# !README.md              <- Your report
