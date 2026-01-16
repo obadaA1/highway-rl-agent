@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+.github
 # Virtual environment
 venv/
 ENV/
@@ -44,9 +44,7 @@ htmlcov/
 # ===== RL & Highway-Env Specific =====
 
 # Trained models and checkpoints (these are large files)
-models/
-checkpoints/
-saved_models/
+assets/checkpoints/
 *.h5
 *.pkl
 *.pth
@@ -76,21 +74,22 @@ experiments/
 # ===== Video Files (Important Exception!) =====
 
 # Temporary video recordings during training
-videos/temp/
-recordings/temp/
+assets/videos/temp/
 
 # KEEP the final evolution video for GitHub
 # !evolution.mp4
 # !evolution.gif
 # Uncomment above lines when you have your final video
-
+!assets/videos/evolution.mp4
+!assets/videos/evolution.gif
 # But ignore all other videos
 *.mp4
 *.avi
 *.mov
 
 # ===== Matplotlib =====
-
+# Temporary plots
+assets/plots/temp/
 # Matplotlib cache
 .matplotlib/
 
