@@ -346,6 +346,10 @@ TRAINING_CONFIG: Dict[str, Any] = {
     # 1: info (progress bar)
     # 2: debug (detailed logs)
     "verbose": 1,
+    
+    # Log metrics frequency (in timesteps)
+    # Log custom metrics every N steps
+    "log_freq": 1000,
 }
 
 

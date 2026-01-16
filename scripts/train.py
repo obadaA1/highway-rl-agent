@@ -110,7 +110,7 @@ def main() -> None:
     
     # Metrics callback (for TensorBoard analysis)
     metrics_callback = CustomMetricsCallback(
-        log_freq=TRAINING_CONFIG["log_freq"],
+        log_freq=TRAINING_CONFIG.get("log_freq", 1000),
         verbose=1,
     )
     
