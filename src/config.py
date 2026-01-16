@@ -241,6 +241,14 @@ TRAINING_CONFIG: Dict[str, Any] = {
     # 100k @ 5 it/s (30 vehicles) = 5.5 hours (feasible overnight)
     "total_timesteps": 100_000,
     
+    # === DEVICE ===
+    
+    # Computation device
+    # "auto": Auto-detect GPU, fallback to CPU
+    # "cuda": Force GPU
+    # "cpu": Force CPU
+    "device": "auto",
+    
     # === LEARNING RATE ===
     
     # Learning rate for Adam optimizer

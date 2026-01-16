@@ -65,9 +65,9 @@ def main() -> None:
     print(f"  Total timesteps: {TRAINING_CONFIG['total_timesteps']:,}")
     print(f"  Checkpoint frequency: {CHECKPOINT_CONFIG['save_freq']:,}")
     print(f"  Vehicle count: 30 (dense traffic)")
-    print(f"  Expected time: ~8 hours @ 3-4 it/s")
-    print(f"  Device: {TRAINING_CONFIG['device']}")
-    print(f"  Seed: {TRAINING_CONFIG['seed']}")
+    print(f"  Expected time: ~6 hours @ 5 it/s")
+    print(f"  Device: {TRAINING_CONFIG.get('device', 'auto')}")
+    print(f"  Seed: {TRAINING_CONFIG.get('seed', 42)}")
     print(f"\nJustification:")
     print(f"  - Windows bottleneck: 2 it/s @ 50 vehicles = 28 hours (infeasible)")
     print(f"  - Trade-off: 30 vehicles @ 100k steps = 8 hours (overnight run)")
@@ -91,8 +91,8 @@ def main() -> None:
         gae_lambda=TRAINING_CONFIG["gae_lambda"],
         clip_range=TRAINING_CONFIG["clip_range"],
         ent_coef=TRAINING_CONFIG["ent_coef"],
-        device=TRAINING_CONFIG["device"],
-        seed=TRAINING_CONFIG["seed"],
+        device=TRAINING_CONFIG.get("device", "auto"),
+        seed=TRAINING_CONFIG.get("seed", 42),
         verbose=1,
     )
     print("✅ Agent ready\n")
