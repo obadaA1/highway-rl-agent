@@ -372,8 +372,8 @@ EVAL_CONFIG: Dict[str, Any] = {
 CHECKPOINT_CONFIG: Dict[str, Any] = {
     # Save frequency (in timesteps)
     # Save model every N steps
-    # For 200k total: 50k means 4 checkpoints
-    "save_freq": 50_000,
+    # For 200k total: 100k means checkpoints at 0k, 100k, 200k (evolution video requirement)
+    "save_freq": 100_000,
     
     # Checkpoint naming prefix
     "name_prefix": "highway_ppo",
@@ -469,6 +469,16 @@ TRAINING_CONFIG: Dict[str, Any] = {
     # Checkpointing
     "checkpoint_freq": 100_000, # Save every 100k steps
     "checkpoint_dir": "assets/checkpoints",
+}
+
+# ==================================================
+# CHECKPOINT CONFIGURATION
+# ==================================================
+
+CHECKPOINT_CONFIG: Dict[str, Any] = {
+    "save_path": str(CHECKPOINTS_DIR),  # Use Path from above
+    "save_freq": 100_000,  # Save every 100k timesteps
+    "name_prefix": "highway_ppo",  # Checkpoint filename prefix
 }
 
 # ==================================================
