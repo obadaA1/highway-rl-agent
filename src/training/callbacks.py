@@ -321,6 +321,7 @@ class ProgressCallback(BaseCallback):
     
     def __init__(
         self,
+        total_timesteps: int,
         update_freq: int = 10_000,
         verbose: int = 1,
     ) -> None:

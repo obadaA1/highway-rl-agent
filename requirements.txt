@@ -13,9 +13,16 @@ stable-baselines3==2.2.1
 # Manual installation required for CUDA support
 torch>=2.0.0
 
-# Visualization
+# Logging & Visualization
+tensorboard==2.15.1   
 matplotlib==3.8.2
 seaborn==0.13.0
+
+# --------------------------------------------------
+# Progress Bars & Terminal UI
+# --------------------------------------------------
+tqdm==4.66.1                   # Progress bar rendering (SB3 requirement)
+rich==13.7.0                   # Fancy terminal output (SB3 requirement)
 
 # Data Processing
 numpy==1.24.3

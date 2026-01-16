@@ -45,7 +45,7 @@ ENV_CONFIG: Dict[str, Any] = {
     # Rendering mode
     # 'rgb_array': Returns images (required for video recording)
     # 'human': Opens visualization window
-    "render_mode": "rgb_array",
+    "render_mode": None,
     
     # Highway-env specific configuration
     # This defines the STATE SPACE (what the agent observes)
@@ -104,8 +104,10 @@ ENV_CONFIG: Dict[str, Any] = {
         "lanes_count": 4,
         
         # Number of other vehicles on the road
-        # Higher = more challenging (dense traffic)
-        "vehicles_count": 50,
+        # CRITICAL: Reduced from 50 to 15 for performance
+        # 50 vehicles causes O(n²) collision checks → 2 FPS
+        # 15 vehicles provides sufficient complexity → 400+ FPS
+        "vehicles_count": 15,
         
         # Ego vehicle starting configuration
         "initial_lane_id": None,  # Random lane
