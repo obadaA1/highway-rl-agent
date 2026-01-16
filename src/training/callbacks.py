@@ -329,13 +329,14 @@ class ProgressCallback(BaseCallback):
         Initialize progress callback.
         
         Args:
+            total_timesteps: Total training steps (must match agent.learn() call)
             update_freq: Print progress every N steps
             verbose: Print messages
         """
         super().__init__(verbose)
         
         self.update_freq = update_freq
-        self.total_timesteps = TRAINING_CONFIG["total_timesteps"]
+        self.total_timesteps = total_timesteps  # Use parameter, not config
         self.start_time: Optional[float] = None
         
     def _on_training_start(self) -> None:
