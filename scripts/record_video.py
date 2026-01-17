@@ -263,8 +263,8 @@ def main() -> None:
     
     Process:
         1. Load checkpoint at 0 steps (untrained)
-        2. Load checkpoint at 50k steps (half-trained)
-        3. Load checkpoint at 100k steps (fully-trained)
+        2. Load checkpoint at 100k steps (half-trained)
+        3. Load checkpoint at 200k steps (fully-trained)
         4. Record COMPLETE episode for each (until crash or time limit)
         5. Add text overlays
         6. Combine into evolution video
@@ -296,8 +296,8 @@ def main() -> None:
     # Define checkpoints and corresponding labels
     checkpoints = [
         (checkpoint_dir / "highway_ppo_0_steps.zip", "Untrained (0k steps)"),
-        (checkpoint_dir / "highway_ppo_50000_steps.zip", "Half-Trained (50k steps)"),
-        (checkpoint_dir / "highway_ppo_100000_steps.zip", "Fully-Trained (100k steps)"),
+        (checkpoint_dir / "highway_ppo_100000_steps.zip", "Half-Trained (100k steps)"),
+        (checkpoint_dir / "highway_ppo_200000_steps.zip", "Fully-Trained (200k steps)"),
     ]
     
     video_paths = []

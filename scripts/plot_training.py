@@ -116,8 +116,8 @@ def plot_reward_curve(data: Dict[str, List[Tuple[int, float]]], output_path: str
     ax.plot(steps_smooth, values_smooth, color='blue', linewidth=2, label='Smoothed (EMA)')
     
     # Add milestone markers
-    ax.axvline(x=50000, color='red', linestyle='--', alpha=0.5, label='Half-trained')
-    ax.axvline(x=100000, color='green', linestyle='--', alpha=0.5, label='Fully-trained')
+    ax.axvline(x=100000, color='red', linestyle='--', alpha=0.5, label='Half-trained')
+    ax.axvline(x=200000, color='green', linestyle='--', alpha=0.5, label='Fully-trained')
     
     ax.set_xlabel('Training Steps', fontsize=12)
     ax.set_ylabel('Episode Reward', fontsize=12)

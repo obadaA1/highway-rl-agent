@@ -71,7 +71,7 @@ def test_agent(checkpoint_path: str, episodes: int = 3):
         
         # Episode summary
         avg_velocity = sum(velocities) / len(velocities) if velocities else 0
-        duration = steps / 15  # 15 Hz
+        duration = steps / 12  # 12 Hz (updated frequency)
         
         print(f"   Duration: {duration:.1f}s ({steps} steps)")
         print(f"   Total Reward: {total_reward:.2f}")

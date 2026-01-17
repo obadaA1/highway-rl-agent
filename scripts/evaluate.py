@@ -158,8 +158,8 @@ def main() -> None:
     # Define checkpoints to evaluate
     checkpoints = [
         checkpoint_dir / "highway_ppo_0_steps.zip",      # Untrained
-        checkpoint_dir / "highway_ppo_50000_steps.zip",  # Half-trained
-        checkpoint_dir / "highway_ppo_100000_steps.zip", # Fully-trained
+        checkpoint_dir / "highway_ppo_100000_steps.zip",  # Half-trained
+        checkpoint_dir / "highway_ppo_200000_steps.zip", # Fully-trained
     ]
     
     results = {}
