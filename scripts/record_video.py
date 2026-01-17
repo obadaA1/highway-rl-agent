@@ -62,16 +62,17 @@ def record_episode(
     # Create environment with rendering
     env = make_highway_env(render_mode="rgb_array")
     
-    # Load agent
-    agent = HighwayPPOAgent(env=env, verbose=0)
-    
     # Special handling for untrained checkpoint (0 steps)
-    if "0_steps" in str(checkpoint_path):
+    # Use exact match to avoid matching "50000_steps" or "100000_steps"
+    checkpoint_name = Path(checkpoint_path).stem
+    if checkpoint_name.endswith("_0_steps") or checkpoint_name == "highway_ppo_0_steps":
         print("   Using untrained (random) policy")
+        agent = HighwayPPOAgent(env=env, verbose=0)
         use_random = True
     else:
-        agent.load(checkpoint_path)
-        print("   Checkpoint loaded")
+        # Load trained checkpoint
+        agent = HighwayPPOAgent.load(checkpoint_path, env=env)
+        print("   ✅ Trained policy loaded")
         use_random = False
     
     # Run episode until natural termination
@@ -99,7 +100,7 @@ def record_episode(
         if use_random:
             action = env.action_space.sample()
         else:
-            action, _ = agent.predict(obs, deterministic=True)
+            action, _ = agent.model.predict(obs, deterministic=True)
         
         # Step environment
         obs, reward, done, truncated, info = env.step(action)
@@ -311,15 +312,12 @@ def main() -> None:
         # Record COMPLETE episode (until natural termination)
         frames = record_episode(
             checkpoint_path=str(checkpoint_path),
-            max_frames=1000,  # Safety limit (40s episode = 600 frames)
+            max_frames=1500,  # Safety limit (80s episode = 1200 frames)
         )
         
-        # Add text overlay
-        annotated_frames = add_text_overlay(frames, label, position=(30, 50))
-        
-        # Save individual video
+        # Save individual video (no text overlay)
         video_path = str(videos_dir / f"{checkpoint_path.stem}.mp4")
-        save_video(annotated_frames, video_path, fps=15)
+        save_video(frames, video_path, fps=15)
         video_paths.append(video_path)
     
     # Combine into evolution video

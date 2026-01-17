@@ -33,6 +33,13 @@ PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 CHECKPOINTS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Path dictionary for scripts
+PATHS: Dict[str, str] = {
+    "checkpoints": str(CHECKPOINTS_DIR),
+    "assets_videos": str(VIDEOS_DIR),
+    "plots": str(PLOTS_DIR),
+}
+
 
 # ==================================================
 # ENVIRONMENT CONFIGURATION
@@ -117,7 +124,8 @@ ENV_CONFIG: Dict[str, Any] = {
         
         # Episode duration (seconds)
         # After this time, episode is truncated (not terminated)
-        "duration": 40,
+        # ADJUSTED: Increased from 40s to 80s to show longer trained agent performance
+        "duration": 80,
         
         # === SIMULATION PARAMETERS ===
         # Simulation frequency (Hz)
@@ -126,13 +134,21 @@ ENV_CONFIG: Dict[str, Any] = {
         
         # Policy frequency (Hz)
         # Agent decision rate (actions per second)
-        "policy_frequency": 1,
+        # FIXED: Changed from 1 Hz to 15 Hz to match simulation frequency
+        # Rationale: Agent needs to react quickly to traffic (not just 1 decision/second)
+        # At 15 Hz: 80 seconds × 15 = 1200 steps per episode
+        "policy_frequency": 15,
         
         # === RENDERING (for video recording) ===
-        "screen_width": 600,
-        "screen_height": 150,
+        # ADJUSTED: Wider screen and more zoomed out for full highway view
+        "screen_width": 1200,
+        "screen_height": 200,
+        # Centering: [0.3, 0.5] means ego vehicle at 30% from left, 50% from top
+        # ADJUSTED: Changed to [0.3, 0.5] to show more road ahead
         "centering_position": [0.3, 0.5],
-        "scaling": 5.5,
+        # Scaling: Lower values = more zoomed out (show more vehicles)
+        # ADJUSTED: Changed to 3.5 for maximum highway visibility
+        "scaling": 3.5,
         "show_trajectories": False,
         "render_agent": True,
         "offscreen_rendering": False,
@@ -161,7 +177,8 @@ REWARD_CONFIG: Dict[str, float] = {
     # Velocity reward weight
     # Encourages high speed (efficiency objective)
     # Range after normalization: [0, 1]
-    "w_velocity": 0.4,
+    # ADJUSTED: Increased from 0.4 to 0.8 to prioritize speed
+    "w_velocity": 0.8,
     
     # Collision penalty weight
     # Heavily penalizes crashes (safety objective)
@@ -171,12 +188,14 @@ REWARD_CONFIG: Dict[str, float] = {
     # Lane change penalty weight
     # Discourages unnecessary swerving (efficiency + safety)
     # Applied as: w_lane_change * (-0.1) when changing lanes
-    "w_lane_change": 0.1,
+    # ADJUSTED: Reduced from 0.1 to 0.02 to allow more maneuvering
+    "w_lane_change": 0.02,
     
     # Safe distance reward weight
     # Encourages maintaining following distance (safety)
     # Range after normalization: [0, 1]
-    "w_distance": 0.3,
+    # ADJUSTED: Reduced from 0.3 to 0.1 to allow closer driving
+    "w_distance": 0.1,
     
     # === NORMALIZATION PARAMETERS ===
     

@@ -59,9 +59,16 @@ def evaluate_checkpoint(
     
     # Load agent
     print("📦 Loading checkpoint...")
-    agent = HighwayPPOAgent(env=env, verbose=0)
-    agent.load(checkpoint_path)
-    print("✅ Checkpoint loaded\n")
+    # Check if this is the untrained checkpoint
+    checkpoint_name = Path(checkpoint_path).stem
+    if checkpoint_name.endswith("_0_steps") or checkpoint_name == "highway_ppo_0_steps":
+        agent = HighwayPPOAgent(env=env, verbose=0)
+        print("✅ Using untrained (random) policy\n")
+        use_random = True
+    else:
+        agent = HighwayPPOAgent.load(checkpoint_path, env=env)
+        print("✅ Checkpoint loaded\n")
+        use_random = False
     
     # Run evaluation
     print(f"🏃 Running {n_episodes} episodes...")
@@ -82,7 +89,10 @@ def evaluate_checkpoint(
         previous_action = None
         
         while not (done or truncated):
-            action, _ = agent.predict(obs, deterministic=True)
+            if use_random:
+                action = env.action_space.sample()
+            else:
+                action, _ = agent.model.predict(obs, deterministic=True)
             obs, reward, done, truncated, info = env.step(action)
             
             episode_reward += reward
