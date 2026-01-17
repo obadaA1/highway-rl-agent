@@ -180,45 +180,78 @@ ENV_CONFIG: Dict[str, Any] = {
 # ==================================================
 # CUSTOM REWARD FUNCTION PARAMETERS
 # ==================================================
+# 
+# PROGRESS-BASED REWARD PHILOSOPHY (OPTIMAL POLICY):
+#
+# Core Objective: Maximize forward progress (distance traveled)
+#   max Σ Δx_t  (maximize total distance, not speed or survival time)
+#
+# This automatically balances speed + survival:
+#   - Fast driving → More distance per step → Higher reward
+#   - Crashing early → Fewer steps → Less total distance → Lower reward
+#   - Optimal policy: Fast + Long survival = Maximum distance
+#
+# Three Minimal Fixes (Ng et al. 1999 reward shaping):
+#
+# FIX 1: Progress reward (not velocity reward)
+#   r_progress = (speed × Δt) / (max_speed × Δt) = normalized distance per step
+#   Why: Crashing early automatically reduces cumulative reward
+#
+# FIX 2: Small survival bonus (prevents "crash early")
+#   r_alive = 0.01 (small enough to NOT dominate progress)
+#   Why: Tiebreaker only, does NOT create "slow forever" behavior
+#
+# FIX 3: Lane changes neutral (not penalized)
+#   r_lane_change = 0.0 (allow overtaking)
+#   Why: Agent learns to change lanes when beneficial for progress
+#
+# FINAL REWARD:
+#   R_t = r_progress + r_alive + r_collision
+#
+# ==================================================
 
 REWARD_CONFIG: Dict[str, float] = {
-    # === COMPONENT WEIGHTS ===
-    # These are the w_i in: R = Σ w_i * r_i
+    # === FIX 1: PROGRESS REWARD (Core change) ===
     
-    # Velocity reward weight
-    # Encourages high speed (efficiency objective)
-    # Range after normalization: [0, 1]
-    # ADJUSTED: Increased from 0.4 to 0.8 to prioritize speed
-    "w_velocity": 0.8,
+    # Progress reward (normalized distance per step)
+    # Formula: r_progress = velocity / max_velocity
+    # At 12 Hz: This approximates (velocity × 1/12) / (max_velocity × 1/12)
+    # Range: [0, 1] per step
+    # 
+    # Why this fixes "slow agent":
+    #   Old (velocity): Slow driving → More steps → More cumulative reward
+    #   New (progress): Slow driving → Less distance/step → Less cumulative reward
+    "w_progress": 1.0,  # No scaling needed (already normalized)
     
-    # Collision penalty weight
-    # Heavily penalizes crashes (safety objective)
-    # Applied as: w_collision * (-1.0) when crashed
-    "w_collision": 1.0,
+    # === FIX 2: SMALL SURVIVAL BONUS ===
     
-    # Lane change penalty weight
-    # Discourages unnecessary swerving (efficiency + safety)
-    # Applied as: w_lane_change * (-0.1) when changing lanes
-    # ADJUSTED: Reduced from 0.1 to 0.02 to allow more maneuvering
-    "w_lane_change": 0.02,
+    # Alive bonus per step (VERY small)
+    # Prevents "crash early after gaining progress" exploitation
+    # CRITICAL: Must be << progress reward (0.01 vs ~0.5-1.0)
+    # Otherwise creates "drive slow forever" behavior again
+    "r_alive": 0.01,
     
-    # Safe distance reward weight
-    # Encourages maintaining following distance (safety)
-    # Range after normalization: [0, 1]
-    # ADJUSTED: Reduced from 0.3 to 0.1 to allow closer driving
-    "w_distance": 0.1,
+    # === COLLISION PENALTY (Hard constraint) ===
+    
+    # Collision penalty (terminal punishment)
+    # Must ALWAYS be worse than any progress gains to prevent strategic crashes
+    # At 12 Hz, max speed: ~1.0 reward/step × 60 steps (5s) = 60.0 max progress
+    # Collision penalty = -80.0 ensures crash is NEVER optimal (80 > 60)
+    "r_collision": -80.0,
+    
+    # === FIX 3: LANE CHANGE NEUTRAL ===
+    
+    # Lane change cost (NEUTRAL - no penalty)
+    # Changed from -0.05 to 0.0 to allow free overtaking
+    # Agent learns: "Change lanes when it increases progress"
+    # Prevents zig-zagging (no reward) while allowing necessary maneuvers
+    "r_lane_change": 0.0,
     
     # === NORMALIZATION PARAMETERS ===
     
-    # Maximum velocity for normalization (m/s)
-    # highway-env typical max velocity: 30 m/s
+    # Maximum velocity for progress normalization (m/s)
+    # highway-env max velocity: 30 m/s (108 km/h)
     "max_velocity": 30.0,
-    
-    # Safe following distance (meters)
-    # Used to normalize distance reward
-    # Based on 2-second rule at 30 m/s = 60m
-    # We use 20m as conservative estimate
-    "safe_distance": 20.0,
 }
 
 
