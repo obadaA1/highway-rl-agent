@@ -1,7 +1,9 @@
 """
-Configuration Verification Script
+Configuration Verification Script (V2: Speed Control)
 
-Validates that all settings are correctly configured for 50-vehicle training.
+Validates that all settings are correctly configured for 40-vehicle training
+with 5-component reward function.
+
 Run this before starting training to catch any misconfigurations.
 """
 
@@ -14,9 +16,9 @@ from src.env.highway_env import make_highway_env
 
 
 def verify_configuration():
-    """Verify all configuration parameters."""
+    """Verify all configuration parameters for V2."""
     print("\n" + "="*70)
-    print("CONFIGURATION VERIFICATION")
+    print("CONFIGURATION VERIFICATION (V2: Speed Control)")
     print("="*70 + "\n")
     
     errors = []
@@ -25,10 +27,10 @@ def verify_configuration():
     # 1. Check vehicle count
     vehicles = ENV_CONFIG["config"]["vehicles_count"]
     print(f"1. Vehicle Count: {vehicles}")
-    if vehicles == 50:
-        print("   ✅ Correct: 50 vehicles (upper bound of benchmarks)")
-    elif vehicles == 30:
-        warnings.append(f"   ⚠️  Still set to 30 vehicles (should be 50)")
+    if vehicles == 40:
+        print("   ✅ Correct: 40 vehicles (V2: reduced for better exploration)")
+    elif vehicles == 50:
+        warnings.append(f"   ⚠️  Still set to 50 vehicles (V2 should be 40)")
     else:
         errors.append(f"   ❌ Unexpected value: {vehicles}")
     print()
@@ -37,10 +39,10 @@ def verify_configuration():
     policy_freq = ENV_CONFIG["config"]["policy_frequency"]
     print(f"2. Policy Frequency: {policy_freq} Hz")
     if policy_freq == 12:
-        print("   ✅ Correct: 12 Hz (optimized for 50 vehicles)")
+        print("   ✅ Correct: 12 Hz (optimized for 40 vehicles)")
         print(f"   → Reaction time: {1000/policy_freq:.1f}ms (ADAS-level)")
     elif policy_freq == 15:
-        warnings.append(f"   ⚠️  Still set to 15 Hz (should be 12 Hz for 50 vehicles)")
+        warnings.append(f"   ⚠️  Still set to 15 Hz (should be 12 Hz)")
     elif policy_freq == 1:
         errors.append(f"   ❌ Critical bug: 1 Hz policy (should be 12 Hz)")
     else:
@@ -79,32 +81,45 @@ def verify_configuration():
         warnings.append("   ⚠️  Still set to 2.0 (should be 2.5 for very dense)")
     print()
     
-    # 6. Check reward weights
-    print(f"6. Reward Configuration:")
-    print(f"   w_velocity: {REWARD_CONFIG['w_velocity']}")
-    print(f"   w_collision: {REWARD_CONFIG['w_collision']}")
-    print(f"   w_lane_change: {REWARD_CONFIG['w_lane_change']}")
-    print(f"   w_distance: {REWARD_CONFIG['w_distance']}")
+    # 6. Check reward configuration (V2: 5 components)
+    print(f"6. Reward Configuration (V2: 5-component):")
+    required_keys = ["w_progress", "r_alive", "r_collision", "r_lane_change",
+                     "r_slow_action", "r_low_speed", "min_speed_ratio", "max_velocity"]
     
-    if (REWARD_CONFIG['w_velocity'] == 0.8 and 
-        REWARD_CONFIG['w_lane_change'] == 0.02 and
-        REWARD_CONFIG['w_distance'] == 0.1):
-        print("   ✅ Correct: Aggressive driving rewards")
+    missing = [key for key in required_keys if key not in REWARD_CONFIG]
+    if missing:
+        errors.append(f"   ❌ Missing keys: {missing}")
+    
+    print(f"   w_progress: {REWARD_CONFIG.get('w_progress', 'MISSING')}")
+    print(f"   r_alive: {REWARD_CONFIG.get('r_alive', 'MISSING')}")
+    print(f"   r_collision: {REWARD_CONFIG.get('r_collision', 'MISSING')}")
+    print(f"   r_lane_change: {REWARD_CONFIG.get('r_lane_change', 'MISSING')}")
+    print(f"   r_slow_action: {REWARD_CONFIG.get('r_slow_action', 'MISSING')} ⚠️ NEW")
+    print(f"   r_low_speed: {REWARD_CONFIG.get('r_low_speed', 'MISSING')} ⚠️ NEW")
+    print(f"   min_speed_ratio: {REWARD_CONFIG.get('min_speed_ratio', 'MISSING')} ⚠️ NEW")
+    
+    # Validate values
+    if (REWARD_CONFIG.get('w_progress') == 1.0 and
+        REWARD_CONFIG.get('r_collision') == -80.0 and
+        REWARD_CONFIG.get('r_slow_action') == -0.02 and
+        REWARD_CONFIG.get('r_low_speed') == -0.01 and
+        REWARD_CONFIG.get('min_speed_ratio') == 0.6):
+        print("   ✅ Correct: V2 speed control configuration")
     else:
-        warnings.append("   ⚠️  Reward weights don't match aggressive configuration")
+        warnings.append("   ⚠️  Reward values don't match V2 configuration")
     print()
     
     # 7. Check training settings
     total_steps = TRAINING_CONFIG['total_timesteps']
     print(f"7. Training Configuration:")
     print(f"   Total timesteps: {total_steps:,}")
-    expected_time_sec = total_steps / 35  # 35 it/s expected
+    expected_time_sec = total_steps / 42  # 40-45 it/s expected for 40 vehicles
     expected_time_min = expected_time_sec / 60
-    print(f"   Expected time @ 35 it/s: {expected_time_min:.1f} minutes")
+    print(f"   Expected time @ 42 it/s: {expected_time_min:.1f} minutes")
     if total_steps == 200_000:
         print("   ✅ Correct: 200k steps (thorough training)")
     elif total_steps == 100_000:
-        warnings.append("   ⚠️  Set to 100k (consider 200k for harder 50-vehicle task)")
+        warnings.append("   ⚠️  Set to 100k (V2 uses 200k)")
     print()
     
     # 8. Test environment creation
@@ -125,7 +140,7 @@ def verify_configuration():
     
     # Summary
     print("="*70)
-    print("SUMMARY")
+    print("SUMMARY (V2: Speed Control)")
     print("="*70)
     
     if errors:
@@ -140,13 +155,14 @@ def verify_configuration():
     
     if not errors and not warnings:
         print("\n✅ ALL CHECKS PASSED")
-        print("\nConfiguration Summary:")
-        print(f"  • 50 vehicles (very dense traffic)")
+        print("\nConfiguration Summary (V2):")
+        print(f"  • 40 vehicles (dense traffic, better exploration)")
         print(f"  • 12 Hz policy (83ms reactions)")
         print(f"  • 960 steps per episode (80s)")
         print(f"  • 200k total timesteps")
-        print(f"  • Expected: ~35 it/s, ~95 min training")
-        print("\n🚀 Ready to start training!")
+        print(f"  • 5-component reward (with speed control)")
+        print(f"  • Expected: ~40-45 it/s, ~90 min training")
+        print("\n🚀 Ready to start V2 training!")
     elif not errors:
         print("\n⚠️  WARNINGS DETECTED (non-critical)")
         print("Training can proceed but configuration may not be optimal.")

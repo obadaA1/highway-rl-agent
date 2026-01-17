@@ -246,19 +246,22 @@ REWARD_CONFIG: Dict[str, float] = {
     # Prevents zig-zagging (no reward) while allowing necessary maneuvers
     "r_lane_change": 0.0,
     
-    # === NEW: SPEED CONTROL (Anti-Degenerate-Policy Fix) ===
+    # === V3: MUCH STRONGER SPEED CONTROL (Anti-Degenerate-Policy Fix) ===
     
     # SLOWER action penalty (discourages "spam SLOWER" degenerate policy)
-    # Previous training: 200k agent used SLOWER 80.2 times per episode (100% of actions)
-    # This penalty makes SLOWER action slightly costly
-    # -0.02 means using SLOWER reduces reward by 2% of typical progress reward
-    "r_slow_action": -0.02,
+    # V1 training: 200k agent used SLOWER 80.2 times/episode (100%)
+    # V2 training: 200k agent used SLOWER 96.6 times/episode (100%) - penalties too weak!
+    # V3: Increased penalty 5× to make slow driving net NEGATIVE
+    # Math: At 5 m/s with SLOWER, reward = (5/30) + 0.01 + (-0.10) + (-0.20) = -0.123 < 0
+    "r_slow_action": -0.10,  # Was -0.02 in V2 (5× stronger)
     
-    # Low speed penalty (encourages maintaining reasonable velocity)
+    # Low speed penalty (enforces minimum velocity)
     # Applied when velocity < min_speed_ratio × max_velocity
-    # -0.01 penalty when speed drops below 60% of max (18 m/s)
-    # Prevents "crawl at 5 m/s forever" exploitation
-    "r_low_speed": -0.01,
+    # V2: -0.01 was too weak (net reward still positive)
+    # V3: -0.20 makes ANY speed below 18 m/s net negative
+    # Critical: Must be > r_alive (0.01) to dominate survival bonus at low speeds
+    # Math: At 5 m/s, reward = 0.167 + 0.01 + 0 + (-0.20) = -0.023 < 0 (even without SLOWER)
+    "r_low_speed": -0.20,  # Was -0.01 in V2 (20× stronger)
     
     # Minimum speed threshold (ratio of max_velocity)
     # 0.6 means 60% of 30 m/s = 18 m/s minimum desired speed
