@@ -111,14 +111,13 @@ ENV_CONFIG: Dict[str, Any] = {
         "lanes_count": 4,
         
         # Number of other vehicles on the road
-        # OPTIMIZED: Set to 50 vehicles (upper bound of academic benchmarks)
+        # ADJUSTED: Reduced to 40 vehicles to improve exploration
         # Justification:
-        #   - Leurent et al. (2018) use 20-50 vehicles, 50 = maximum difficulty
-        #   - Represents Level of Service E (extremely dense highway flow)
-        #   - With 12 Hz policy optimization: 35 it/s, 47-minute training (sub-1-hour)
-        #   - O(n²) collision detection: 1,225 checks/step (2.8× vs 30 vehicles)
-        #   - Maximizes rubric score: "very dense traffic" vs "dense traffic"
-        "vehicles_count": 50,
+        #   - Previous 50-vehicle training led to degenerate policies
+        #   - 40 vehicles = still dense (Leurent et al. use 20-50 range)
+        #   - Allows better learning dynamics while maintaining difficulty
+        #   - Should improve training speed and convergence quality
+        "vehicles_count": 40,
         
         # Ego vehicle starting configuration
         "initial_lane_id": None,  # Random lane
@@ -246,6 +245,26 @@ REWARD_CONFIG: Dict[str, float] = {
     # Agent learns: "Change lanes when it increases progress"
     # Prevents zig-zagging (no reward) while allowing necessary maneuvers
     "r_lane_change": 0.0,
+    
+    # === NEW: SPEED CONTROL (Anti-Degenerate-Policy Fix) ===
+    
+    # SLOWER action penalty (discourages "spam SLOWER" degenerate policy)
+    # Previous training: 200k agent used SLOWER 80.2 times per episode (100% of actions)
+    # This penalty makes SLOWER action slightly costly
+    # -0.02 means using SLOWER reduces reward by 2% of typical progress reward
+    "r_slow_action": -0.02,
+    
+    # Low speed penalty (encourages maintaining reasonable velocity)
+    # Applied when velocity < min_speed_ratio × max_velocity
+    # -0.01 penalty when speed drops below 60% of max (18 m/s)
+    # Prevents "crawl at 5 m/s forever" exploitation
+    "r_low_speed": -0.01,
+    
+    # Minimum speed threshold (ratio of max_velocity)
+    # 0.6 means 60% of 30 m/s = 18 m/s minimum desired speed
+    # Below this: r_low_speed penalty applies
+    # Above this: no speed penalty
+    "min_speed_ratio": 0.6,
     
     # === NORMALIZATION PARAMETERS ===
     
@@ -612,17 +631,18 @@ def validate_config() -> bool:
             f"total_timesteps ({TRAINING_CONFIG['total_timesteps']})"
         )
     
-    # Check reward weights sum makes sense
-    reward_sum = sum([
-        REWARD_CONFIG["w_velocity"],
-        REWARD_CONFIG["w_collision"],
-        REWARD_CONFIG["w_lane_change"],
-        REWARD_CONFIG["w_distance"],
-    ])
-    if reward_sum > 10.0:  # Sanity check
+    # Check reward configuration consistency
+    required_keys = ["w_progress", "r_alive", "r_collision", "r_lane_change", 
+                     "r_slow_action", "r_low_speed", "min_speed_ratio", "max_velocity"]
+    missing_keys = [key for key in required_keys if key not in REWARD_CONFIG]
+    if missing_keys:
+        errors.append(f"Missing reward config keys: {missing_keys}")
+    
+    # Validate penalty magnitudes
+    if abs(REWARD_CONFIG["r_collision"]) < 60:
         errors.append(
-            f"Reward weights sum to {reward_sum:.2f}, "
-            f"which seems unusually high"
+            f"Collision penalty ({REWARD_CONFIG['r_collision']}) too weak. "
+            f"Should be < -60 to dominate max progress at 12 Hz."
         )
     
     if errors:

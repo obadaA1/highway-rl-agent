@@ -16,7 +16,7 @@ Compliance:
     - Follows rubric requirements
 
 Run: python scripts/train.py
-Expected time: 5-6 hours (Windows bottleneck)
+Expected time: ~1.5 hours (40 vehicles @ 40-45 it/s)
 """
 
 import sys
@@ -41,17 +41,18 @@ def main() -> None:
     Execute full training run.
     
     Configuration:
-        - Total timesteps: 200,000 (thorough training for 50 vehicles)
+        - Total timesteps: 200,000 (thorough training for 40 vehicles)
         - Checkpoint frequency: 100,000 steps
         - Saves at: 0k, 100k, 200k (for evolution video requirement)
         - Progress updates: Every 10,000 steps
-        - Vehicle count: 50 (very dense traffic, upper bound)
+        - Vehicle count: 40 (dense traffic, improved from 50)
+        - Reward: 5-component with speed control penalties (NEW)
     
-    Justification for 200k steps:
-        - Leurent et al. (2018) use 100-200k for convergence
-        - 50 vehicles = harder task, benefits from extended training
-        - 200k @ 35 it/s = 95 minutes (1.6 hours, feasible)
-        - Upper training range justified for upper vehicle density
+    Justification for changes:
+        - 40 vehicles: Reduces degenerate policy risk (50 caused single-action loops)
+        - Speed penalties: Prevents SLOWER-spam and low-speed exploitation
+        - 200k @ 40-45 it/s = 90 minutes (1.5 hours, faster than previous)
+        - Still challenging (Leurent et al. use 20-50 range)
     
     Evolution Video Requirement:
         This script produces the 3 checkpoints needed for the rubric:
@@ -60,21 +61,27 @@ def main() -> None:
         3. assets/checkpoints/highway_ppo_200000_steps.zip (fully-trained)
     """
     print("\n" + "="*70)
-    print("HIGHWAY RL AGENT - FULL TRAINING")
+    print("HIGHWAY RL AGENT - FULL TRAINING (V2: Speed Control)")
     print("="*70)
     print(f"\nConfiguration:")
     print(f"  Total timesteps: {TRAINING_CONFIG['total_timesteps']:,}")
     print(f"  Checkpoint frequency: {CHECKPOINT_CONFIG['save_freq']:,}")
-    print(f"  Vehicle count: 50 (very dense traffic)")
+    print(f"  Vehicle count: 40 (dense traffic, improved exploration)")
     print(f"  Policy frequency: 12 Hz (83ms reactions)")
-    print(f"  Expected time: ~95 minutes @ 35 it/s")
+    print(f"  Expected time: ~90 minutes @ 40-45 it/s")
     print(f"  Device: {TRAINING_CONFIG.get('device', 'auto')}")
     print(f"  Seed: {TRAINING_CONFIG.get('seed', 42)}")
+    print(f"\nReward Components (5-part):")
+    print(f"  - Progress: v/v_max (core objective)")
+    print(f"  - Alive: +0.01 (survival bonus)")
+    print(f"  - Collision: -80.0 (hard constraint)")
+    print(f"  - SLOWER action: -0.02 (anti-spam) ⚠️ NEW")
+    print(f"  - Low speed: -0.01 if v<18m/s ⚠️ NEW")
     print(f"\nOptimizations:")
-    print(f"  - 50 vehicles (upper bound of benchmarks, very dense)")
-    print(f"  - 12 Hz policy (balanced for O(n²) collision overhead)")
-    print(f"  - 200k steps (thorough training for harder task)")
-    print(f"  - Expected: 35 it/s, sub-2-hour training")
+    print(f"  - 40 vehicles (reduced from 50 for better learning)")
+    print(f"  - Speed control penalties (fixes degenerate policies)")
+    print(f"  - 200k steps (thorough convergence)")
+    print(f"  - Expected: 40-45 it/s, ~1.5 hour training")
     print("="*70 + "\n")
     
     # 1. Create environment
@@ -148,7 +155,7 @@ def main() -> None:
         )
         
         print("\n" + "="*70)
-        print("✅ TRAINING COMPLETE!")
+        print("✅ TRAINING COMPLETE! (V2: Speed Control)")
         print("="*70)
         print("\nGenerated artifacts:")
         print(f"  📁 Checkpoints: {CHECKPOINT_CONFIG['save_path']}/")
@@ -156,12 +163,17 @@ def main() -> None:
         print(f"     - highway_ppo_100000_steps.zip (half-trained)")
         print(f"     - highway_ppo_200000_steps.zip (fully-trained)")
         print(f"  📊 TensorBoard logs: tensorboard_logs/highway_ppo_training_*/")
+        print("\nExpected improvements over V1:")
+        print("  ✓ Balanced action distribution (not single-action loops)")
+        print("  ✓ Maintains speed >18 m/s (not crawling)")
+        print("  ✓ Uses FASTER/IDLE/LANE_CHANGE strategically")
         print("\nNext steps:")
-        print("  1. Generate evolution video:")
-        print("     python scripts/record_video.py")
-        print("  2. Evaluate final agent:")
+        print("  1. Evaluate trained agent:")
         print("     python scripts/evaluate.py")
-        print("  3. Create training plots from TensorBoard")
+        print("  2. Generate evolution videos:")
+        print("     python scripts/record_video.py")
+        print("     python scripts/record_video_eval.py")
+        print("  3. Compare with V1 results (should see action diversity)")
         print("="*70 + "\n")
         
     except KeyboardInterrupt:

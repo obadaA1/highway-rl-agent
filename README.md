@@ -14,6 +14,42 @@ During development, we observed significantly lower simulation throughput (≈12
 
 ## Results & Analysis
 
+### Initial Training Results (200k steps)
+
+**Training Configuration:**
+- Algorithm: PPO
+- Total timesteps: 200,000
+- Environment: 50 vehicles, density 2.5, 12 Hz policy, 80s duration
+- Reward: Progress-based (distance/step) with -5.0 collision penalty
+
+**Evaluation Results (100 episodes per checkpoint):**
+
+| Checkpoint | Mean Reward | Episode Length | Crash Rate | Dominant Action |
+|------------|-------------|----------------|------------|-----------------|
+| 0k (Untrained) | -54.2 ± 19.1 | 25.5 ± 18.9 steps | 100% | Balanced (all ~5 times) |
+| 100k | -35.7 ± 32.6 | 43.9 ± 32.3 steps | 100% | LANE_RIGHT only (43.9 times) |
+| 200k | +1.1 ± 67.2 | 80.2 ± 66.5 steps | 100% | SLOWER only (80.2 times) |
+
+**Critical Issue Identified: Degenerate Policies**
+
+Both trained agents learned single-action strategies:
+- **100k checkpoint**: Constantly attempts right lane changes (action 2 only), never uses FASTER/IDLE/LEFT
+- **200k checkpoint**: Constantly attempts to slow down (action 4 only), never uses other actions
+- **Lane change transitions**: 0.0 for both trained agents (stuck repeating same action)
+
+**Analysis:**
+- Clear learning progression: reward improved from -54.2 → -35.7 → +1.1
+- Episode duration increased: 25.5 → 43.9 → 80.2 steps (agent learns to survive longer)
+- **However**: Agents converged to local minima (degenerate policies) rather than balanced driving
+- Root cause likely: insufficient exploration, poor hyperparameters, or action space issues
+
+**Next Steps:**
+- Adjust hyperparameters (learning rate, entropy coefficient for more exploration)
+- Consider different reward shaping or collision penalty magnitude
+- Retrain and re-evaluate to achieve balanced action distribution
+
+---
+
 ### Training Performance
 
 We conducted two full training runs (100,000 timesteps each) with different reward configurations:

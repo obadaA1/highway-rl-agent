@@ -77,6 +77,7 @@ def evaluate_checkpoint(
     episode_lengths: List[int] = []
     episode_crashes: List[int] = []
     episode_lane_changes: List[int] = []
+    episode_action_counts: List[Dict[str, int]] = []  # Track all action types
     
     for ep in range(n_episodes):
         obs, info = env.reset()
@@ -88,6 +89,15 @@ def evaluate_checkpoint(
         lane_changes = 0
         previous_action = None
         
+        # Track action counts: 0=LEFT, 1=IDLE, 2=RIGHT, 3=FASTER, 4=SLOWER
+        action_counts = {
+            'lane_left': 0,
+            'idle': 0,
+            'lane_right': 0,
+            'faster': 0,
+            'slower': 0,
+        }
+        
         while not (done or truncated):
             if use_random:
                 action = env.action_space.sample()
@@ -98,19 +108,39 @@ def evaluate_checkpoint(
             episode_reward += reward
             episode_length += 1
             
+            # Track action counts
+            if action == 0:
+                action_counts['lane_left'] += 1
+            elif action == 1:
+                action_counts['idle'] += 1
+            elif action == 2:
+                action_counts['lane_right'] += 1
+            elif action == 3:
+                action_counts['faster'] += 1
+            elif action == 4:
+                action_counts['slower'] += 1
+            
             # Track crashes
             if info.get('crashed', False):
                 crashed = True
             
-            # Track lane changes
-            if previous_action is not None and action in [0, 2]:  # LANE_LEFT or LANE_RIGHT
-                lane_changes += 1
+            # Track lane changes (count transitions TO lane change actions)
+            # Only count when switching FROM non-lane-change TO lane-change action
+            if previous_action is not None:
+                is_lane_change_action = action in [0, 2]  # LANE_LEFT or LANE_RIGHT
+                was_lane_change_action = previous_action in [0, 2]
+                
+                # Count transition from non-lane-change to lane-change
+                if is_lane_change_action and not was_lane_change_action:
+                    lane_changes += 1
+            
             previous_action = action
         
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
         episode_crashes.append(1 if crashed else 0)
         episode_lane_changes.append(lane_changes)
+        episode_action_counts.append(action_counts)
         
         # Progress update every 10 episodes
         if (ep + 1) % 10 == 0:
@@ -131,6 +161,23 @@ def evaluate_checkpoint(
         'std_lane_changes': float(np.std(episode_lane_changes)),
     }
     
+    # Compute action statistics
+    total_actions = {key: 0 for key in ['lane_left', 'idle', 'lane_right', 'faster', 'slower']}
+    for action_count in episode_action_counts:
+        for key in total_actions:
+            total_actions[key] += action_count[key]
+    
+    # Average actions per episode
+    n_eps = len(episode_action_counts)
+    action_stats = {
+        'mean_lane_left': total_actions['lane_left'] / n_eps,
+        'mean_idle': total_actions['idle'] / n_eps,
+        'mean_lane_right': total_actions['lane_right'] / n_eps,
+        'mean_faster': total_actions['faster'] / n_eps,
+        'mean_slower': total_actions['slower'] / n_eps,
+    }
+    stats.update(action_stats)
+    
     # Print results
     print("\n" + "="*70)
     print("EVALUATION RESULTS")
@@ -142,8 +189,14 @@ def evaluate_checkpoint(
     print(f"  Mean: {stats['mean_length']:.1f} ± {stats['std_length']:.1f} steps")
     print(f"\n💥 Safety Metrics:")
     print(f"  Crash Rate: {stats['crash_rate']*100:.1f}%")
-    print(f"\n🚗 Efficiency Metrics:")
-    print(f"  Lane Changes: {stats['mean_lane_changes']:.1f} ± {stats['std_lane_changes']:.1f} per episode")
+    print(f"\n🚗 Action Distribution (per episode):")
+    print(f"  LANE_LEFT:  {stats['mean_lane_left']:.1f} times")
+    print(f"  IDLE:       {stats['mean_idle']:.1f} times")
+    print(f"  LANE_RIGHT: {stats['mean_lane_right']:.1f} times")
+    print(f"  FASTER:     {stats['mean_faster']:.1f} times")
+    print(f"  SLOWER:     {stats['mean_slower']:.1f} times")
+    print(f"\n🔄 Lane Change Transitions:")
+    print(f"  Transitions: {stats['mean_lane_changes']:.1f} ± {stats['std_lane_changes']:.1f} per episode")
     print("="*70 + "\n")
     
     return stats

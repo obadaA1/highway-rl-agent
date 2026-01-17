@@ -1,4 +1,4 @@
-"""Test new three-layer reward function."""
+"""Test five-component reward function with speed control."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,7 +10,7 @@ import numpy as np
 def test_reward_components():
     """Test individual reward components."""
     print("="*70)
-    print("REWARD FUNCTION TEST - PROGRESS-BASED")
+    print("REWARD FUNCTION TEST - PROGRESS-BASED + SPEED CONTROL")
     print("="*70)
     
     # Display configuration
@@ -19,6 +19,9 @@ def test_reward_components():
     print(f"  Collision penalty: {REWARD_CONFIG['r_collision']}")
     print(f"  Lane change cost: {REWARD_CONFIG['r_lane_change']} (neutral)")
     print(f"  Alive bonus: {REWARD_CONFIG['r_alive']}")
+    print(f"  SLOWER action penalty: {REWARD_CONFIG['r_slow_action']} ⚠️ NEW")
+    print(f"  Low speed penalty: {REWARD_CONFIG['r_low_speed']} ⚠️ NEW")
+    print(f"  Min speed ratio: {REWARD_CONFIG['min_speed_ratio']} (60% threshold)")
     print(f"  Max velocity: {REWARD_CONFIG['max_velocity']} m/s")
     
     # Create environment
@@ -55,16 +58,39 @@ def test_reward_components():
     print(f"  Progress reward: {components['progress']:.4f}")
     print(f"  Alive bonus: {components['alive']:.4f}")
     print(f"  Collision penalty: {components['collision']:.4f}")
+    print(f"  SLOWER penalty: {components['slow_action']:.4f}")
+    print(f"  Low speed penalty: {components['low_speed']:.4f}")
     print(f"  Total reward: {reward:.4f}")
     
     # Lane changes should be neutral (no penalty)
-    if abs(reward - (components['progress'] + components['alive'])) < 0.001:
-        print(f"  ✅ Lane change is neutral (no penalty)")
+    expected_sum = (components['progress'] + components['alive'] + 
+                    components['slow_action'] + components['low_speed'])
+    if abs(reward - expected_sum) < 0.001:
+        print(f"  ✅ Lane change is neutral (no extra penalty)")
     else:
         print(f"  ❌ Lane change penalty detected!")
     
     print("\n" + "─"*70)
-    print("TEST 3: Run Until Crash")
+    print("TEST 3: SLOWER Action (should trigger penalty)")
+    print("─"*70)
+    
+    action = 4  # SLOWER
+    obs, reward, done, truncated, info = env.step(action)
+    
+    components = info['custom_reward_components']
+    print(f"  Progress reward: {components['progress']:.4f}")
+    print(f"  Alive bonus: {components['alive']:.4f}")
+    print(f"  SLOWER penalty: {components['slow_action']:.4f}")
+    print(f"  Low speed penalty: {components['low_speed']:.4f}")
+    print(f"  Total reward: {reward:.4f}")
+    
+    if components['slow_action'] == REWARD_CONFIG['r_slow_action']:
+        print(f"  ✅ SLOWER action penalty applied correctly ({REWARD_CONFIG['r_slow_action']})")
+    else:
+        print(f"  ❌ SLOWER action penalty incorrect!")
+    
+    print("\n" + "─"*70)
+    print("TEST 4: Run Until Crash")
     print("─"*70)
     
     # Reset and run until crash
@@ -85,6 +111,8 @@ def test_reward_components():
             print(f"    Progress: {components['progress']:.4f}")
             print(f"    Alive: {components['alive']:.4f}")
             print(f"    Collision: {components['collision']:.4f}")
+            print(f"    SLOWER penalty: {components['slow_action']:.4f}")
+            print(f"    Low speed: {components['low_speed']:.4f}")
             print(f"  Episode total reward: {episode_reward:.2f}")
             
             if components['collision'] == REWARD_CONFIG['r_collision']:

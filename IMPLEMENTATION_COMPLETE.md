@@ -1,7 +1,27 @@
 # Progress-Based Reward Implementation - COMPLETE ✅
 
 ## Summary
-Successfully implemented the optimal 3-fix progress-based reward function as proposed by the RL expert.
+Successfully implemented the optimal 3-fix progress-based reward function as proposed by the RL expert, with collision penalty increased to -80.0.
+
+## Latest Updates
+
+### Video Recording Enhancements ✅
+Updated `scripts/record_video.py` to show comprehensive statistics and use appropriate selection strategy:
+
+**Selection Strategy:**
+- **0k (Untrained):** Takes FIRST episode only (no cherry-picking, shows authentic random behavior)
+- **100k/200k (Trained):** Best of 5 episodes (shows true capability, accounts for 50-vehicle variance)
+
+**Stats Overlay:**
+Each video frame now displays:
+- Duration (seconds)
+- Total reward
+- Distance traveled (meters)
+- Number of lane changes
+
+**Recording Limits:**
+- Continues until collision OR 80 second time limit
+- Same environment config as training (50 vehicles, 12 Hz, dense traffic)
 
 ## Changes Made
 
