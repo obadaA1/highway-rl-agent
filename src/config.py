@@ -163,15 +163,20 @@ ENV_CONFIG: Dict[str, Any] = {
         # OPTIMIZED: Increased to 2.5 for very dense traffic
         "vehicles_density": 2.5,
         
-        # === DEFAULT REWARDS (we'll override these) ===
-        # These are highway-env defaults
-        # We'll implement custom reward function instead
-        "collision_reward": -1.0,
-        "right_lane_reward": 0.0,
-        "high_speed_reward": 0.4,
-        "lane_change_reward": 0.0,
-        "reward_speed_range": [20, 30],
-        "normalize_reward": True,
+        # === DEFAULT REWARDS (DISABLED FOR V5) ===
+        # CRITICAL FIX: Disable highway-env's built-in reward shaping
+        # Problem: Built-in rewards dominated custom V5 reward, causing:
+        #   - Degenerate LANE_RIGHT-only policy (92% of actions)
+        #   - Zero FASTER action usage
+        #   - Agent optimized for "stay right = clear lane" instead of strategic driving
+        # Solution: Neutralize all built-in rewards to give custom reward full control
+        "collision_reward": -1.0,        # Keep (used by highway-env internally)
+        "right_lane_reward": 0.0,        # Disabled (was biasing right lane)
+        "high_speed_reward": 0.0,        # Disabled (was conflicting with r_progress)
+        "lane_change_reward": 0.0,       # Disabled (we use r_lane instead)
+        "reward_speed_range": [0, 30],   # Wide range = no implicit speed penalty
+        "normalize_reward": False,       # Use raw custom reward (no normalization)
+        "offroad_terminal": False,       # Don't terminate on lane boundaries
     }
 }
 
@@ -387,52 +392,97 @@ REWARD_V4_CONFIG = {
 # ===================================================================
 
 REWARD_V5_CONFIG: Dict[str, float] = {
-    # === INHERITED FROM V4 ===
+    # === INHERITED FROM V4 (REBALANCED V5.1) ===
     "r_alive": 0.01,
-    "r_collision": -100.0,
-    "min_speed_ratio": 0.6,  # 60% of max speed
-    "r_low_speed": -0.02,
+    "r_collision": -50.0,            # REDUCED: Was -100, too dominant vs speed rewards
+    "min_speed_ratio": 0.6,          # 60% of max speed
+    "r_low_speed": -0.05,            # INCREASED: Was -0.02, now meaningful
     "acceleration_weight": 0.2,
-    "r_slow_action_heavy": -0.05,  # When already slow (< 70%)
-    "r_slow_action_light": -0.01,  # When moving fast (>= 70%)
-    "r_faster_bonus": 0.05,
     
-    # === V5 NEW: SAFE HEADWAY REWARD ===
-    # Time-headway based reward/penalty
-    # τ (tau) = distance / velocity [seconds]
+    # === V5.1 REBALANCED: SLOWER PENALTY (Much Higher) ===
+    # PROBLEM: Old -0.01/-0.05 was too weak. Agent spammed SLOWER to avoid
+    # collisions (surviving at low speed > crashing at high speed).
     # 
-    # Safe following guidelines:
-    #   - 2-second rule: τ ≥ 2.0s (highway patrol recommendation)
-    #   - ADAS systems: τ ≥ 1.0s (emergency threshold)
-    #   - Dangerous: τ < 0.5s (collision imminent)
-    # 
-    # Formula:
-    #   r_headway = +0.10 if τ ≥ τ_safe    (reward safe following)
-    #             = -0.10 if τ < τ_danger  (penalize tailgating)
-    #             = 0.00  otherwise        (neutral zone)
+    # FIX: Make SLOWER expensive enough that agent prefers lane changes.
     #
-    # Rubric: "Reward... maintaining safe distances" ✓
+    # Formula:
+    #   r_slower = -0.15 if v < 70%  (heavy: already slow, don't slow more)
+    #            = -0.08 if v >= 70% (significant: slowing from high speed)
+    #
+    # Effect: SLOWER now costs ~10% of progress reward, making it a real tradeoff
+    "r_slow_action_heavy": -0.15,    # INCREASED: Was -0.05 (3x)
+    "r_slow_action_light": -0.08,    # INCREASED: Was -0.01 (8x)
     
-    "headway_tau_safe": 1.5,      # Safe time-headway threshold (seconds)
-    "headway_tau_danger": 0.5,    # Dangerous time-headway threshold (seconds)
-    "r_headway_safe": 0.10,       # Reward for safe following
-    "r_headway_danger": -0.10,    # Penalty for tailgating
+    # === V5.1 NEW: IDLE BONUS (Reward Speed Maintenance) ===
+    # PROBLEM: No positive reward for maintaining high speed.
+    # Agent had no reason to prefer IDLE over SLOWER at high speed.
+    #
+    # FIX: Give bonus for IDLE when already at high speed.
+    #
+    # Formula:
+    #   r_idle = +0.05 if v >= 80% AND action == IDLE
+    #          = 0.00 otherwise
+    #
+    # Effect: Actively rewards maintaining speed, not just penalizing slow
+    "r_idle_bonus": 0.05,            # NEW: Bonus for IDLE at high speed
+    "v_idle_threshold": 0.8,         # NEW: Apply bonus above 80% speed
+    # === V5.1 REBALANCED: FASTER BONUS (Stronger Proportional) ===
+    # PROBLEM: Even 0.15 max wasn't strong enough vs SLOWER survival strategy.
+    # 
+    # FIX: Increase max bonus and make it more significant.
+    #
+    # Formula:
+    #   r_faster = r_faster_max × (1 - velocity_ratio) if v < 95%
+    #            = 0.0 otherwise
+    #
+    # Effect (with r_faster_max=0.25):
+    #   At 50% speed: +0.125 bonus for FASTER (significant!)
+    #   At 70% speed: +0.075 bonus for FASTER  
+    #   At 90% speed: +0.025 bonus for FASTER
+    "r_faster_max": 0.25,              # INCREASED: Was 0.15 (67% increase)
+    "v_faster_threshold": 0.95,        # INCREASED: Was 0.9 (bonus up to 95% speed)
     
-    # === V5 NEW: LANE CHANGE PENALTY ===
-    # Small penalty for lane change actions
+    # === V5 REBALANCED: SAFE HEADWAY REWARD (No Empty Lane Bonus) ===
+    # PROBLEM: Old +0.10 for safe distance rewarded staying in empty right lane
+    # This caused LANE_RIGHT-only policy (92% of actions)
+    #
+    # FIX: NEUTRAL for safe distance, only PENALIZE tailgating
     # 
     # Formula:
-    #   r_lane = -0.02 if action ∈ {LANE_LEFT, LANE_RIGHT}
+    #   r_headway = 0.00 if τ ≥ τ_safe     (NEUTRAL, not bonus!)
+    #             = -0.10 × danger_ratio   (proportional penalty for tailgating)
+    #             = 0.00 otherwise          (neutral zone)
+    #
+    # Rubric: "Reward... maintaining safe distances" ✓ (via penalty avoidance)
+    
+    "headway_tau_safe": 1.5,           # Safe time-headway threshold (seconds)
+    "headway_tau_danger": 0.5,         # Dangerous time-headway threshold (seconds)
+    "r_headway_safe": 0.0,             # CHANGED: Neutral (was +0.10, caused RIGHT bias)
+    "r_headway_danger_max": -0.10,     # Maximum penalty for extreme tailgating
+    
+    # === V5 REBALANCED: ASYMMETRIC LANE CHANGE PENALTY ===
+    # PROBLEM: Symmetric -0.02 made LEFT and RIGHT equally costly
+    # Since RIGHT leads to emptier lanes, agent learned RIGHT-only
+    #
+    # FIX: Penalize RIGHT more than LEFT (encourage passing on left)
+    # 
+    # Formula:
+    #   r_lane = -0.01 if action == LEFT  (small, encourages passing)
+    #          = -0.03 if action == RIGHT (larger, discourages retreat)
     #          = 0.00  otherwise
     #
     # Effect:
-    #   - Discourages zig-zagging (high-frequency lane changes)
-    #   - Still allows strategic lane changes when benefit > 0.02
-    #   - Per-step penalty: 10 lane changes = -0.20 total
+    #   - LEFT lane changes: -0.01 (passing slower traffic encouraged)
+    #   - RIGHT lane changes: -0.03 (retreating to slow lane discouraged)
+    #   - Net effect: Agent prefers passing on left over retreating right
     #
     # Rubric: "Penalize... unnecessary lane changes" ✓
     
-    "r_lane_change": -0.02,       # Per lane change penalty
+    "r_lane_left": -0.01,              # Small penalty for passing (encouraged)
+    "r_lane_right": -0.03,             # Larger penalty for retreat (discouraged)
+    
+    # Max velocity for calculations
+    "max_velocity": 30.0,
 }
 
 

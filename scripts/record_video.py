@@ -24,7 +24,7 @@ from typing import List, Tuple, Dict
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.env.highway_env import make_highway_env
+from src.env.highway_env_v5 import make_highway_env_v5  # V5
 from src.agent.ppo_agent import HighwayPPOAgent
 from src.config import PATHS
 import numpy as np
@@ -73,7 +73,7 @@ def record_episode(
         print(f"   Will record FIRST episode only (no selection)")
     
     # Create environment with rendering
-    env = make_highway_env(render_mode="rgb_array")
+    env = make_highway_env_v5(render_mode="rgb_array")
     
     # Special handling for untrained checkpoint (0 steps)
     if checkpoint_name.endswith("_0_steps") or checkpoint_name == "highway_ppo_0_steps":
