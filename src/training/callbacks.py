@@ -18,7 +18,7 @@ Date: 2025-01-16
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
@@ -218,6 +218,11 @@ class CustomMetricsCallback(BaseCallback):
         self.episode_crashes: list = []
         self.episode_lane_changes: list = []
         
+        # V4: Track velocity and action distribution
+        self.episode_velocities: list = []
+        self.action_counts: Dict[int, int] = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.step_delta_vs: list = []
+        
         if self.verbose > 0:
             print(f"📊 CustomMetricsCallback initialized:")
             print(f"   Log frequency: every {self.log_freq:,} steps")
@@ -232,11 +237,23 @@ class CustomMetricsCallback(BaseCallback):
         Returns:
             True to continue training
         """
+        # V4: Track action distribution
+        action = self.locals.get("actions", [0])[0]
+        if isinstance(action, np.ndarray):
+            action = int(action.item())
+        self.action_counts[action] = self.action_counts.get(action, 0) + 1
+        
+        # V4: Track velocity and delta_v from info
+        info = self.locals.get("infos", [{}])[0]
+        if "custom_reward_components" in info:
+            components = info["custom_reward_components"]
+            if "velocity_ratio" in components:
+                self.episode_velocities.append(components["velocity_ratio"])
+            if "delta_v" in components:
+                self.step_delta_vs.append(components["delta_v"])
+        
         # Check if episode ended (done or truncated)
         if self.locals.get("dones", [False])[0]:
-            # Extract episode info
-            info = self.locals.get("infos", [{}])[0]
-            
             # Accumulate statistics
             if "episode" in self.locals:
                 ep_info = self.locals["episode"]
@@ -268,15 +285,27 @@ class CustomMetricsCallback(BaseCallback):
         - Mean episode length
         - Crash rate
         - Lane change frequency
+        - V4: avg_velocity, action distribution, delta_v
         
         Then logs to TensorBoard and clears buffers.
         """
         # Compute statistics
-        mean_reward = np.mean(self.episode_rewards)
-        std_reward = np.std(self.episode_rewards)
-        mean_length = np.mean(self.episode_lengths)
+        mean_reward = np.mean(self.episode_rewards) if self.episode_rewards else 0.0
+        std_reward = np.std(self.episode_rewards) if self.episode_rewards else 0.0
+        mean_length = np.mean(self.episode_lengths) if self.episode_lengths else 0.0
         crash_rate = np.mean(self.episode_crashes) if self.episode_crashes else 0.0
         mean_lane_changes = np.mean(self.episode_lane_changes) if self.episode_lane_changes else 0.0
+        
+        # V4: Compute velocity and delta_v stats
+        avg_velocity = np.mean(self.episode_velocities) if self.episode_velocities else 0.0
+        avg_delta_v = np.mean(self.step_delta_vs) if self.step_delta_vs else 0.0
+        
+        # V4: Compute action distribution percentages
+        total_actions = sum(self.action_counts.values())
+        if total_actions > 0:
+            action_pct = {k: v / total_actions * 100 for k, v in self.action_counts.items()}
+        else:
+            action_pct = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
         
         # Log to TensorBoard
         self.logger.record("rollout/ep_rew_mean_custom", mean_reward)
@@ -285,6 +314,18 @@ class CustomMetricsCallback(BaseCallback):
         self.logger.record("custom/crash_rate", crash_rate)
         self.logger.record("custom/lane_changes_mean", mean_lane_changes)
         
+        # V4: Log velocity and delta_v
+        self.logger.record("custom/avg_velocity_ratio", avg_velocity)
+        self.logger.record("custom/avg_velocity_mps", avg_velocity * 30.0)  # Convert to m/s
+        self.logger.record("custom/avg_delta_v", avg_delta_v)
+        
+        # V4: Log action distribution
+        self.logger.record("actions/LANE_LEFT_pct", action_pct[0])
+        self.logger.record("actions/IDLE_pct", action_pct[1])
+        self.logger.record("actions/LANE_RIGHT_pct", action_pct[2])
+        self.logger.record("actions/FASTER_pct", action_pct[3])
+        self.logger.record("actions/SLOWER_pct", action_pct[4])
+        
         # Print summary
         if self.verbose > 0:
             print(f"\n📊 Metrics @ {self.num_timesteps:,} steps:")
@@ -292,13 +333,19 @@ class CustomMetricsCallback(BaseCallback):
             print(f"   Reward: {mean_reward:.3f} ± {std_reward:.3f}")
             print(f"   Length: {mean_length:.1f} steps")
             print(f"   Crash rate: {crash_rate*100:.1f}%")
-            print(f"   Lane changes: {mean_lane_changes:.1f}/episode")
+            print(f"   Avg velocity: {avg_velocity*30:.1f} m/s ({avg_velocity*100:.0f}%)")
+            print(f"   Avg Δv: {avg_delta_v:.4f}")
+            print(f"   Actions: LEFT={action_pct[0]:.0f}% IDLE={action_pct[1]:.0f}% "
+                  f"RIGHT={action_pct[2]:.0f}% FASTER={action_pct[3]:.0f}% SLOWER={action_pct[4]:.0f}%")
         
         # Clear buffers
         self.episode_rewards.clear()
         self.episode_lengths.clear()
         self.episode_crashes.clear()
         self.episode_lane_changes.clear()
+        self.episode_velocities.clear()
+        self.step_delta_vs.clear()
+        self.action_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
 
 
 class ProgressCallback(BaseCallback):

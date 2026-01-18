@@ -322,6 +322,48 @@ REWARD_CONFIG: Dict[str, float] = {
 }
 
 
+# ===================================================================
+# V4: ACCELERATION-AWARE REWARD (NO OVERTAKING)
+# ===================================================================
+# Focus: Simplify to core driving mechanics
+# - Progress reward includes acceleration bonus
+# - Context-dependent SLOWER penalty (heavier when already slow)
+# - Small FASTER bonus when moving slowly
+# - Remove ALL overtaking logic and risk tracking
+# 
+# Rationale: V3.5 may be too complex for laptop CPU training
+#            V4 tests simpler hypothesis: reward acceleration directly
+# ===================================================================
+
+REWARD_V4_CONFIG = {
+    # === CORE PARAMETERS (SAME AS V3) ===
+    "r_alive": 0.01,
+    "r_collision": -100.0,  # Single penalty, no risk logic
+    "min_speed_threshold": 18.0,
+    "r_low_speed": -0.02,  # V4 FIX: Reduced from -0.20 (was too strong)
+    
+    # === V4 NEW: ACCELERATION BONUS ===
+    # Progress reward = velocity_ratio + acceleration_weight × Δvelocity
+    # Encourages speeding up, not just maintaining speed
+    # Weight: 0.2 means acceleration is 20% as important as current speed
+    "acceleration_weight": 0.2,
+    
+    # === V4 NEW: CONTEXT-DEPENDENT SLOWER PENALTY ===
+    # Penalize SLOWER action more heavily when already slow
+    # If velocity < slow_velocity_threshold: penalty = r_slower_heavy
+    # Otherwise: penalty = r_slower_light
+    "slow_velocity_threshold": 0.7,  # 70% of max speed
+    "r_slower_heavy": -0.05,  # When already slow (< 70%)
+    "r_slower_light": -0.01,  # When moving fast (>= 70%)
+    
+    # === V4 NEW: FASTER BONUS ===
+    # Small bonus for using FASTER when slow
+    # Encourages active acceleration when below threshold
+    "faster_velocity_threshold": 0.8,  # 80% of max speed
+    "r_faster_bonus": 0.05,  # Small positive when slow
+}
+
+
 # ==================================================
 # NEURAL NETWORK ARCHITECTURE
 # ==================================================
