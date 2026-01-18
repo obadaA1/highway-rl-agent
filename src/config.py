@@ -269,11 +269,56 @@ REWARD_CONFIG: Dict[str, float] = {
     # Above this: no speed penalty
     "min_speed_ratio": 0.6,
     
+    # === V3.5 ENHANCED: OVERTAKING BONUS (Risk-Aware Engagement) ===
+    
+    # Overtaking bonus per vehicle passed (V3.5 addition for better engagement)
+    # Encourages active traffic navigation while maintaining V3's speed-first objective
+    # Formula: +2.0 per successful overtake (when relative velocity > 2 m/s)
+    # Effect: Incentivizes lane changes for strategic overtaking
+    "r_overtake_bonus": 2.0,
+    
+    # Minimum relative velocity to count as overtake (m/s)
+    # Prevents counting "drifting past" slow vehicles as overtakes
+    # Must be actively passing (ego_vx - vehicle_vx > 2.0)
+    "min_overtake_speed": 2.0,
+    
+    # === V3.5 ENHANCED: DYNAMIC COLLISION PENALTY (95% Confidence Formula) ===
+    
+    # Base collision penalty (always applied on crash)
+    # Increased from -80.0 to -100.0 for stronger safety constraint
+    # Math: -100.0 > max(60 steps × 1.0 progress + 10 overtakes × 2.0) = -100 > 80
+    "r_collision_base": -100.0,
+    
+    # Additional penalty for risky overtaking crashes (V3.5 enhancement)
+    # Applied when crash occurs within overtake_risk_window after overtaking
+    # Total risky crash penalty: -100.0 + (-38.0) = -138.0
+    # 
+    # Mathematical Model (95% Confidence Requirement):
+    #   Expected value: E = P(success) × r_overtake + P(crash) × r_collision_risky
+    #   For break-even: 0 = P(success) × 2.0 + P(crash) × (-138.0)
+    #   Required confidence: P(success) = 138 / (138 + 2) = 0.9857 (~98.5%)
+    # 
+    # Effect: Agent learns "only overtake when very confident of success"
+    #   - 95% confidence: E = -5.00 (agent avoids)
+    #   - 99% confidence: E = +0.62 (agent attempts)
+    # 
+    # Risk ratio: 138:2 = 69:1 (conservative, safer than exactly 95%)
+    "r_collision_risky": -38.0,  # For exactly 95%: use -38.0 (ratio 19:1)
+    
+    # Risk window duration (seconds after overtake)
+    # Crash within this window after overtaking = risky maneuver
+    # At 12 Hz: 3.0s × 12 = 36 steps of heightened risk
+    "overtake_risk_window": 3.0,
+    
     # === NORMALIZATION PARAMETERS ===
     
     # Maximum velocity for progress normalization (m/s)
     # highway-env max velocity: 30 m/s (108 km/h)
     "max_velocity": 30.0,
+    
+    # Policy frequency for time calculations (Hz)
+    # Used to convert overtake_risk_window from seconds to steps
+    "policy_frequency": 12,
 }
 
 
