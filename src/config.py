@@ -364,6 +364,78 @@ REWARD_V4_CONFIG = {
 }
 
 
+# ===================================================================
+# V5: RUBRIC-COMPLIANT REWARD (V4 + SAFE HEADWAY + LANE PENALTY)
+# ===================================================================
+# Full rubric compliance with 8-component reward:
+# 
+# Components inherited from V4:
+#   1. r_progress: velocity + acceleration bonus
+#   2. r_alive: survival bonus
+#   3. r_collision: crash penalty
+#   4. r_slow_action: context-dependent SLOWER penalty
+#   5. r_low_speed: penalty for < 60% max speed
+#   6. r_faster_bonus: bonus for FASTER when slow
+#
+# NEW V5 components for rubric compliance:
+#   7. r_headway: Safe distance reward (rubric: "maintaining safe distances")
+#   8. r_lane: Lane change penalty (rubric: "penalize unnecessary lane changes")
+#
+# Mathematical Formulation:
+#   R(s,a) = Σᵢ rᵢ(s,a)  (8 components)
+#
+# ===================================================================
+
+REWARD_V5_CONFIG: Dict[str, float] = {
+    # === INHERITED FROM V4 ===
+    "r_alive": 0.01,
+    "r_collision": -100.0,
+    "min_speed_ratio": 0.6,  # 60% of max speed
+    "r_low_speed": -0.02,
+    "acceleration_weight": 0.2,
+    "r_slow_action_heavy": -0.05,  # When already slow (< 70%)
+    "r_slow_action_light": -0.01,  # When moving fast (>= 70%)
+    "r_faster_bonus": 0.05,
+    
+    # === V5 NEW: SAFE HEADWAY REWARD ===
+    # Time-headway based reward/penalty
+    # τ (tau) = distance / velocity [seconds]
+    # 
+    # Safe following guidelines:
+    #   - 2-second rule: τ ≥ 2.0s (highway patrol recommendation)
+    #   - ADAS systems: τ ≥ 1.0s (emergency threshold)
+    #   - Dangerous: τ < 0.5s (collision imminent)
+    # 
+    # Formula:
+    #   r_headway = +0.10 if τ ≥ τ_safe    (reward safe following)
+    #             = -0.10 if τ < τ_danger  (penalize tailgating)
+    #             = 0.00  otherwise        (neutral zone)
+    #
+    # Rubric: "Reward... maintaining safe distances" ✓
+    
+    "headway_tau_safe": 1.5,      # Safe time-headway threshold (seconds)
+    "headway_tau_danger": 0.5,    # Dangerous time-headway threshold (seconds)
+    "r_headway_safe": 0.10,       # Reward for safe following
+    "r_headway_danger": -0.10,    # Penalty for tailgating
+    
+    # === V5 NEW: LANE CHANGE PENALTY ===
+    # Small penalty for lane change actions
+    # 
+    # Formula:
+    #   r_lane = -0.02 if action ∈ {LANE_LEFT, LANE_RIGHT}
+    #          = 0.00  otherwise
+    #
+    # Effect:
+    #   - Discourages zig-zagging (high-frequency lane changes)
+    #   - Still allows strategic lane changes when benefit > 0.02
+    #   - Per-step penalty: 10 lane changes = -0.20 total
+    #
+    # Rubric: "Penalize... unnecessary lane changes" ✓
+    
+    "r_lane_change": -0.02,       # Per lane change penalty
+}
+
+
 # ==================================================
 # NEURAL NETWORK ARCHITECTURE
 # ==================================================

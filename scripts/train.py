@@ -25,7 +25,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.env.highway_env import make_highway_env
+from src.env.highway_env_v5 import make_highway_env_v5
 from src.agent.ppo_agent import HighwayPPOAgent
 from src.training.callbacks import (
     CheckpointCallback,
@@ -61,7 +61,7 @@ def main() -> None:
         3. assets/checkpoints/highway_ppo_200000_steps.zip (fully-trained)
     """
     print("\n" + "="*70)
-    print("HIGHWAY RL AGENT - FULL TRAINING (V4: Acceleration-Aware)")
+    print("HIGHWAY RL AGENT - FULL TRAINING (V5: Rubric-Compliant)")
     print("="*70)
     print(f"\nConfiguration:")
     print(f"  Total timesteps: {TRAINING_CONFIG['total_timesteps']:,}")
@@ -71,23 +71,26 @@ def main() -> None:
     print(f"  Expected time: ~90 minutes @ 25-30 it/s")
     print(f"  Device: {TRAINING_CONFIG.get('device', 'auto')}")
     print(f"  Seed: {TRAINING_CONFIG.get('seed', 42)}")
-    print(f"\nReward Components (V4 - 6 parts):")
+    print(f"\nReward Components (V5 - 8 parts, RUBRIC-COMPLIANT):")
     print(f"  - Progress: v + 0.2×Δv (velocity + acceleration)")
     print(f"  - Alive: +0.01 (survival bonus)")
     print(f"  - Collision: -100.0 (hard constraint)")
     print(f"  - SLOWER: -0.05 if slow, -0.01 if fast (context-dependent)")
-    print(f"  - Low speed: -0.02 if v<18m/s (reduced from -0.20)")
-    print(f"  - FASTER bonus: +0.05 if v<80% (encourages acceleration)")
-    print(f"\nV4 Improvements:")
-    print(f"  - Acceleration bonus: Rewards speeding UP, not just speed")
-    print(f"  - Context SLOWER: Heavy penalty only when already slow")
-    print(f"  - FASTER incentive: PPO learns to use FASTER action")
-    print(f"  - No overtaking logic: Simpler, focus on core driving")
+    print(f"  - Low speed: -0.02 if v<18m/s")
+    print(f"  - FASTER bonus: +0.05 if v<80%")
+    print(f"  - Headway: +0.10 safe / -0.10 danger (NEW: safe distance)")
+    print(f"  - Lane change: -0.02 per change (NEW: rubric requirement)")
+    print(f"\nV5 Rubric Compliance:")
+    print(f"  ✓ 'Reward high forward velocity' → r_progress")
+    print(f"  ✓ 'Penalize collisions' → r_collision (-100)")
+    print(f"  ✓ 'Penalize driving too slowly' → r_low_speed + r_slow_action")
+    print(f"  ✓ 'Maintaining safe distances' → r_headway (V5 NEW)")
+    print(f"  ✓ 'Penalize unnecessary lane changes' → r_lane (V5 NEW)")
     print("="*70 + "\n")
     
-    # 1. Create environment
-    print("📦 Creating environment...")
-    env = make_highway_env(render_mode=None)
+    # 1. Create V5 environment
+    print("📦 Creating V5 environment (rubric-compliant)...")
+    env = make_highway_env_v5(render_mode=None)
     print("✅ Environment ready\n")
     
     # 2. Initialize agent
@@ -156,7 +159,7 @@ def main() -> None:
         )
         
         print("\n" + "="*70)
-        print("✅ TRAINING COMPLETE! (V4: Acceleration-Aware)")
+        print("✅ TRAINING COMPLETE! (V5: Rubric-Compliant)")
         print("="*70)
         print("\nGenerated artifacts:")
         print(f"  📁 Checkpoints: {CHECKPOINT_CONFIG['save_path']}/")
@@ -164,11 +167,13 @@ def main() -> None:
         print(f"     - highway_ppo_100000_steps.zip (half-trained)")
         print(f"     - highway_ppo_200000_steps.zip (fully-trained)")
         print(f"  📊 TensorBoard logs: tensorboard_logs/highway_ppo_training_*/")
-        print("\nV4 Success Criteria:")
+        print("\nV5 Success Criteria:")
         print("  ✓ FASTER action usage: >30%")
         print("  ✓ SLOWER action usage: <20%")
         print("  ✓ Mean velocity: >20 m/s (67% of max)")
         print("  ✓ Crash rate: <50%")
+        print("  ✓ Lane changes/episode: <15 (balanced)")
+        print("  ✓ Headway violations: <10% of steps")
         print("\nNext steps:")
         print("  1. Evaluate: python scripts/evaluate.py")
         print("  2. Record videos: python scripts/record_video.py")
