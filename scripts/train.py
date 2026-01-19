@@ -73,6 +73,12 @@ def main() -> None:
         default=None,
         help="Additional steps to train from checkpoint (if not specified, uses config)"
     )
+    parser.add_argument(
+        "--log-name",
+        type=str,
+        default=None,
+        help="Custom TensorBoard log name (default: 'highway_ppo_training')"
+    )
     args = parser.parse_args()
     
     print("\n" + "="*70)
@@ -224,11 +230,14 @@ def main() -> None:
     print(f"⚠️  Press Ctrl+C to pause (checkpoint will be saved)")
     print("="*70 + "\n")
     
+    # Determine TensorBoard log name
+    tb_log_name = args.log_name if args.log_name else "highway_ppo_training"
+    
     try:
         agent.train(
             total_timesteps=additional_steps,  # Train for additional steps only
             callback=callback,
-            tb_log_name="highway_ppo_training",
+            tb_log_name=tb_log_name,
             reset_num_timesteps=False,  # CRITICAL: Don't reset counter for resume!
         )
         

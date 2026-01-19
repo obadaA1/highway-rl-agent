@@ -229,18 +229,27 @@ def main():
     print("TRAINING ANALYSIS: GENERATING PLOTS")
     print("="*70)
     
-    # Find TensorBoard log directory
+    # Find TensorBoard log directory (V6 version)
     log_base = Path("tensorboard_logs")
-    log_dirs = list(log_base.glob("highway_ppo_training_*"))
     
-    if not log_dirs:
+    # Look for V6-specific logs first, then fall back to generic training logs
+    v6_log_dirs = list(log_base.glob("highway_ppo_v6*"))
+    generic_log_dirs = list(log_base.glob("highway_ppo_training_*"))
+    
+    if v6_log_dirs:
+        log_dirs = v6_log_dirs
+        print("\n✅ Found V6 training logs")
+    elif generic_log_dirs:
+        log_dirs = generic_log_dirs
+        print("\n⚠️  Using legacy training logs (not V6-specific)")
+    else:
         print("\n⚠️  No training logs found in tensorboard_logs/")
-        print("   Expected: tensorboard_logs/highway_ppo_training_*/")
+        print("   Expected: tensorboard_logs/highway_ppo_v6* or highway_ppo_training_*/")
         return
     
     # Use the most recent log directory
     log_dir = sorted(log_dirs)[-1]
-    print(f"\nUsing log directory: {log_dir}")
+    print(f"Using log directory: {log_dir}")
     
     # Extract data
     data = extract_tensorboard_data(str(log_dir))

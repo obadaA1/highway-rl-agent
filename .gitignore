@@ -44,15 +44,18 @@ htmlcov/
 # ===== RL & Highway-Env Specific =====
 
 # Trained models and checkpoints (these are large files)
-assets/checkpoints/
+# Keep only the 3 checkpoints needed for evolution video
+assets/checkpoints/*.zip
+!assets/checkpoints/highway_ppo_0_steps.zip
+!assets/checkpoints/highway_ppo_100000_steps.zip
+!assets/checkpoints/highway_ppo_200000_steps.zip
 *.h5
 *.pkl
 *.pth
 *.ckpt
-*.zip
 
 # TensorBoard logs (can regenerate)
-tensorboard/
+tensorboard_logs/
 runs/
 logs/
 
@@ -71,33 +74,32 @@ experiments/
 *.dylib
 *.dll
 
-# ===== Video Files (Important Exception!) =====
+# ===== Video Files (Important for Grading!) =====
 
-# Temporary video recordings during training
-assets/videos/temp/
-
-# KEEP the final evolution video for GitHub
-# !evolution.mp4
-# !evolution.gif
-# Uncomment above lines when you have your final video
+# KEEP the final evolution videos for README embedding (required for grading!)
+!assets/videos/highway_ppo_0_steps.mp4
+!assets/videos/highway_ppo_100000_steps.mp4
+!assets/videos/highway_ppo_200000_steps.mp4
 !assets/videos/evolution.mp4
 !assets/videos/evolution.gif
-# But ignore all other videos
-*.mp4
+
+# Ignore temporary video files
+assets/videos/temp/
 *.avi
 *.mov
+*.mkv
 
 # ===== Matplotlib =====
-# Temporary plots
-assets/plots/temp/
-# Matplotlib cache
-.matplotlib/
+# KEEP final plots for README embedding (required for grading!)
+!assets/plots/reward_curve.png
+!assets/plots/episode_length.png
+!assets/plots/training_summary.png
 
-# Generated plots (can regenerate from code)
+# Ignore temporary plots
+assets/plots/temp/
+.matplotlib/
 plots/temp/
 figures/temp/
-
-# KEEP final plots for README
 # !plots/training_curve.png
 # !plots/reward_analysis.png
 # Uncomment when you have final plots
