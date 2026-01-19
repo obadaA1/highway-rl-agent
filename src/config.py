@@ -675,9 +675,9 @@ TRAINING_CONFIG: Dict[str, Any] = {
     # Entropy coefficient
     # Encourages exploration by adding entropy bonus
     # Higher = more random actions (more exploration)
-    # 0.0 = no entropy bonus (pure exploitation)
-    # For highway-env, 0.0 works (environment has enough stochasticity)
-    "ent_coef": 0.0,
+    # 0.02 = moderate entropy bonus for better late-stage exploration
+    # Increased from 0.0 to help prevent overfitting and policy collapse
+    "ent_coef": 0.02,
     
     # Value function coefficient
     # Weight of value loss in total loss
