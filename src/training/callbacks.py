@@ -350,25 +350,32 @@ class CustomMetricsCallback(BaseCallback):
 
 class ProgressCallback(BaseCallback):
     """
-    Track and display training progress.
+    Track and display training progress with resume support.
     
     Provides periodic updates on:
     - Training speed (FPS)
     - Estimated time remaining
     - Recent performance metrics
+    - Properly handles resumed training
     
     Args:
+        total_timesteps: Target total steps (not additional steps)
+        starting_timesteps: Steps already completed (for resume)
         update_freq: Frequency (in steps) to print updates
         verbose: Verbosity level
     
     Example:
-        callback = ProgressCallback(update_freq=10_000)
-        # Prints update every 10k steps with ETA
+        # Fresh training
+        callback = ProgressCallback(total_timesteps=200_000, starting_timesteps=0)
+        
+        # Resumed training
+        callback = ProgressCallback(total_timesteps=200_000, starting_timesteps=100_000)
     """
     
     def __init__(
         self,
         total_timesteps: int,
+        starting_timesteps: int = 0,
         update_freq: int = 10_000,
         verbose: int = 1,
     ) -> None:
@@ -376,14 +383,17 @@ class ProgressCallback(BaseCallback):
         Initialize progress callback.
         
         Args:
-            total_timesteps: Total training steps (must match agent.learn() call)
+            total_timesteps: Target total training steps
+            starting_timesteps: Steps already completed (0 for fresh, >0 for resume)
             update_freq: Print progress every N steps
             verbose: Print messages
         """
         super().__init__(verbose)
         
         self.update_freq = update_freq
-        self.total_timesteps = total_timesteps  # Use parameter, not config
+        self.total_timesteps = total_timesteps
+        self.starting_timesteps = starting_timesteps
+        self.additional_steps = total_timesteps - starting_timesteps
         self.start_time: Optional[float] = None
         
     def _on_training_start(self) -> None:
@@ -392,10 +402,14 @@ class ProgressCallback(BaseCallback):
         self.start_time = time.time()
         
         if self.verbose > 0:
+            mode = "RESUMED" if self.starting_timesteps > 0 else "FRESH"
             print(f"\n{'='*70}")
-            print(f"TRAINING STARTED")
+            print(f"TRAINING STARTED ({mode})")
             print(f"{'='*70}")
-            print(f"Total timesteps: {self.total_timesteps:,}")
+            if self.starting_timesteps > 0:
+                print(f"Already completed: {self.starting_timesteps:,} steps")
+                print(f"Additional steps: {self.additional_steps:,}")
+            print(f"Target total: {self.total_timesteps:,} steps")
             print(f"Progress updates every: {self.update_freq:,} steps")
             print(f"{'='*70}\n")
     
@@ -407,7 +421,7 @@ class ProgressCallback(BaseCallback):
         return True
     
     def _print_progress(self) -> None:
-        """Print training progress update."""
+        """Print training progress update with resume-aware calculations."""
         import time
         
         if self.start_time is None:
@@ -415,13 +429,19 @@ class ProgressCallback(BaseCallback):
         
         # Calculate metrics
         elapsed_time = time.time() - self.start_time
-        progress = self.num_timesteps / self.total_timesteps
-        fps = self.num_timesteps / elapsed_time if elapsed_time > 0 else 0
         
-        # Estimate remaining time
-        if progress > 0:
-            total_time = elapsed_time / progress
-            remaining_time = total_time - elapsed_time
+        # Progress calculation accounts for starting point
+        current_progress = self.num_timesteps  # Absolute timesteps
+        progress_ratio = current_progress / self.total_timesteps
+        
+        # FPS for current session only
+        steps_this_session = current_progress - self.starting_timesteps
+        fps = steps_this_session / elapsed_time if elapsed_time > 0 else 0
+        
+        # Estimate remaining time based on current session speed
+        if fps > 0 and progress_ratio < 1.0:
+            remaining_steps = self.total_timesteps - current_progress
+            remaining_time = remaining_steps / fps
         else:
             remaining_time = 0
         
@@ -434,11 +454,11 @@ class ProgressCallback(BaseCallback):
         
         if self.verbose > 0:
             print(f"\n{'='*70}")
-            print(f"PROGRESS UPDATE @ {self.num_timesteps:,} steps")
+            print(f"PROGRESS UPDATE @ {current_progress:,} / {self.total_timesteps:,} steps")
             print(f"{'='*70}")
-            print(f"Completion: {progress*100:.1f}%")
-            print(f"Training speed: {fps:.0f} FPS")
-            print(f"Elapsed time: {format_time(elapsed_time)}")
+            print(f"Overall completion: {progress_ratio*100:.1f}%")
+            print(f"This session: {steps_this_session:,} steps in {format_time(elapsed_time)}")
+            print(f"Training speed: {fps:.1f} FPS")
             print(f"Estimated remaining: {format_time(remaining_time)}")
             print(f"{'='*70}\n")
 

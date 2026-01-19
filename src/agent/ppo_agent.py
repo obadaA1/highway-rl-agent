@@ -187,6 +187,7 @@ class HighwayPPOAgent:
         total_timesteps: int,
         callback: Optional[BaseCallback] = None,
         tb_log_name: str = "highway_ppo",
+        reset_num_timesteps: bool = True,
     ) -> None:
         """
         Train the agent.
@@ -195,6 +196,7 @@ class HighwayPPOAgent:
             total_timesteps: Total number of environment steps
             callback: Callback for checkpointing/logging (optional)
             tb_log_name: TensorBoard log name
+            reset_num_timesteps: Whether to reset timestep counter (False for resume)
         
         Theory:
             Training loop:
@@ -215,6 +217,7 @@ class HighwayPPOAgent:
             callback=callback,
             tb_log_name=tb_log_name,
             progress_bar=True,  # Show progress bar
+            reset_num_timesteps=reset_num_timesteps,  # Support resume
         )
         
         print(f"\n✅ Training complete!")
