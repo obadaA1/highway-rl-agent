@@ -25,7 +25,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.env.highway_env_v5 import make_highway_env_v5
+from src.env.highway_env_v6 import make_highway_env_v6
 from src.agent.ppo_agent import HighwayPPOAgent
 from src.training.callbacks import (
     CheckpointCallback,
@@ -61,7 +61,7 @@ def main() -> None:
         3. assets/checkpoints/highway_ppo_200000_steps.zip (fully-trained)
     """
     print("\n" + "="*70)
-    print("HIGHWAY RL AGENT - FULL TRAINING (V5.1: Rebalanced)")
+    print("HIGHWAY RL AGENT - FULL TRAINING (V6: Simple Robust)")
     print("="*70)
     print(f"\nConfiguration:")
     print(f"  Total timesteps: {TRAINING_CONFIG['total_timesteps']:,}")
@@ -71,26 +71,22 @@ def main() -> None:
     print(f"  Expected time: ~90 minutes @ 25-30 it/s")
     print(f"  Device: {TRAINING_CONFIG.get('device', 'auto')}")
     print(f"  Seed: {TRAINING_CONFIG.get('seed', 42)}")
-    print(f"\nReward Components (V5.1 - 9 parts, REBALANCED):")
-    print(f"  - Progress: v + 0.2×Δv (velocity + acceleration)")
-    print(f"  - Alive: +0.01 (survival bonus)")
-    print(f"  - Collision: -50.0 (reduced from -100)")
-    print(f"  - SLOWER: -0.15 if slow, -0.08 if fast (8x increase!)")
-    print(f"  - Low speed: -0.05 if v<60%")
-    print(f"  - FASTER bonus: up to +0.25 proportional")
-    print(f"  - IDLE bonus: +0.05 if v>=80% (NEW!)")
-    print(f"  - Headway: 0 neutral / -0.10 danger (safe distance)")
-    print(f"  - Lane change: LEFT -0.01 / RIGHT -0.03 (asymmetric)")
-    print(f"\nV5.1 Fix for SLOWER-only policy:")
-    print(f"  ✓ SLOWER penalty 8x stronger (-0.08 vs -0.01)")
-    print(f"  ✓ IDLE bonus (+0.05) rewards speed maintenance")
-    print(f"  ✓ Collision reduced (-50 vs -100) to not dominate")
-    print(f"  ✓ Asymmetric lane: LEFT encouraged, RIGHT discouraged")
+    print(f"\nV6 Design Philosophy (Following Highway-Env Best Practices):")
+    print(f"  - Use built-in normalized rewards [0, 1]")
+    print(f"  - high_speed_reward: 0.4 (standard)")
+    print(f"  - collision_reward: -1 (terminates episode)")
+    print(f"  - Simple lane_change_penalty: 0.05")
+    print(f"  - NO complex penalties that can be exploited")
+    print(f"\nWhy V6 Should Work:")
+    print(f"  ✓ No negative accumulation (agent won't prefer early termination)")
+    print(f"  ✓ Uses proven highway-env reward structure")
+    print(f"  ✓ Simple = fewer exploits")
+    print(f"  ✓ Speed is the primary objective")
     print("="*70 + "\n")
     
-    # 1. Create V5 environment
-    print("📦 Creating V5 environment (rubric-compliant)...")
-    env = make_highway_env_v5(render_mode=None)
+    # 1. Create V6 environment
+    print("📦 Creating V6 environment (simple, robust)...")
+    env = make_highway_env_v6(render_mode=None)
     print("✅ Environment ready\n")
     
     # 2. Initialize agent

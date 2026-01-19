@@ -25,7 +25,7 @@ from typing import Dict, List
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.env.highway_env_v5 import make_highway_env_v5
+from src.env.highway_env_v6 import make_highway_env_v6  # V6
 from src.agent.ppo_agent import HighwayPPOAgent
 from src.config import CHECKPOINT_CONFIG
 import numpy as np
@@ -55,7 +55,7 @@ def evaluate_checkpoint(
     print("="*70 + "\n")
     
     # Create environment
-    env = make_highway_env_v5(render_mode="human" if render else None)
+    env = make_highway_env_v6(render_mode="human" if render else None)
     
     # Load agent
     print("📦 Loading checkpoint...")

@@ -486,6 +486,40 @@ REWARD_V5_CONFIG: Dict[str, float] = {
 }
 
 
+# ===================================================================
+# V6: SIMPLE ROBUST REWARD (Following Highway-Env Best Practices)
+# ===================================================================
+# Design Philosophy:
+# 
+# After 3 failed attempts (V5 RIGHT-only, V5.1 SLOWER-only, V5.2 LEFT-only),
+# we return to basics following highway-env's proven approach:
+#
+# 1. NORMALIZED rewards [0, 1] - prevents early termination preference
+# 2. SIMPLE structure - fewer components = fewer exploits
+# 3. USE BUILT-IN reward - highway-env's reward is well-tested
+# 4. SMALL custom adjustments only
+#
+# From highway-env documentation:
+#   "We forbid negative rewards, since they may encourage the agent to prefer 
+#    terminating an episode early (by causing a collision) rather than risking 
+#    suffering a negative return if no satisfying trajectory can be found."
+#
+# ===================================================================
+
+REWARD_V6_CONFIG: Dict[str, float] = {
+    # Lane change penalty - small, just for rubric compliance
+    # "Penalize unnecessary lane changes" ✓
+    "lane_change_penalty": 0.05,
+    
+    # Collision penalty - applied on top of base reward at termination
+    # Moderate value - termination itself is the main penalty
+    "collision_penalty": 0.5,
+    
+    # Minimum reward floor - allow slight negative for crashes only
+    "min_reward": -0.5,
+}
+
+
 # ==================================================
 # NEURAL NETWORK ARCHITECTURE
 # ==================================================
