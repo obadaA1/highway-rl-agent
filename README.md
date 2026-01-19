@@ -23,7 +23,8 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 
 > **VISUAL PROOF OF LEARNING:** The video below demonstrates the complete training progression from random agent to trained policy.
 
-https://github.com/user-attachments/assets/[YOUR-VIDEO-ID]
+0_steps training: 
+https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_0_steps.mp4
 
 
 
