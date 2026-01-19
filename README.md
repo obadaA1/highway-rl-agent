@@ -14,8 +14,8 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 2. **Safety**: Avoid collisions with other vehicles
 
 **Environment:** `highway-env` (Gymnasium-compatible)  
-**Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU  
-**Training Duration:** 200,000 timesteps (~2.5 hours)
+**Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (CUDA-accelerated training)  
+**Training Duration:** 200,000 timesteps (~2.5 hours with GPU)
 
 ---
 
@@ -43,8 +43,8 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 | Stage | Checkpoint | Duration | Behavior | Crash Rate |
 |-------|-----------|----------|----------|------------|
 | **Untrained** | 0 steps | 6-15 sec | Random actions, immediate crashes | 98% |
-| **Half-Trained** | 100k steps | 64 sec (full episode) | Learned survival via slow driving | 3% |
-| **Fully-Trained** | 200k steps | 64 sec (full episode) | Refined slow-driving policy | 4% |
+| **Half-Trained** | 100k steps | ~60 sec (near timeout) | Learned survival via slow driving | 3% |
+| **Fully-Trained** | 200k steps | ~58 sec (near timeout) | Refined slow-driving policy | 4% |
 
 ---
 
@@ -159,23 +159,21 @@ L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r
 
 ### Neural Network Architecture
 
-**Policy Network (Actor):**
+**Shared MLP Policy (Actor-Critic):**
 ```
 Input:  Observation (5, 5) → Flatten → 25 neurons
-Hidden: 128 neurons (ReLU activation)
-Hidden: 128 neurons (ReLU activation)
-Output: 5 neurons (action probabilities, Softmax)
+Shared Hidden Layer 1: 128 neurons (ReLU activation)
+Shared Hidden Layer 2: 128 neurons (ReLU activation)
+  ├─ Actor Head:  5 neurons (action probabilities, Softmax)
+  └─ Critic Head: 1 neuron (state value estimate)
 ```
 
-**Value Network (Critic):**
-```
-Input:  Observation (5, 5) → Flatten → 25 neurons
-Hidden: 128 neurons (ReLU activation)
-Hidden: 128 neurons (ReLU activation)
-Output: 1 neuron (state value estimate)
-```
+**Architecture Details:**
+- Both actor and critic share the same feature extraction layers `[128, 128]`
+- Only the final output heads are separate (policy vs value function)
+- This weight sharing improves sample efficiency and reduces parameters
 
-**Total Parameters:** ~21,000 trainable parameters
+**Total Parameters:** ~17,000 trainable parameters
 
 ---
 
@@ -244,10 +242,11 @@ Output: 1 neuron (state value estimate)
 ![Episode Length](assets/plots/episode_length.png)
 
 **Interpretation:**
-- Untrained agent survives ~134 steps (~8 seconds at 15 Hz)
-- Trained agents reach ~470 steps (~31 seconds at 15 Hz)
+- Untrained agent survives ~134 steps (~11 seconds at 12 Hz policy frequency)
+- Trained agents reach ~470 steps (~39 seconds at 12 Hz policy frequency)
+- Episodes can run up to 80 seconds (960 steps at 12 Hz) before timeout
+- Trained agents survive to near-timeout consistently, showing learned stability
 - Plateau around 50k steps indicates agent learned survival strategy early
-- Consistent survival time shows policy stability (low variance)
 
 ---
 
