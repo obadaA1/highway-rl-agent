@@ -1,9 +1,9 @@
 # 🚗 Highway Autonomous Driving with Reinforcement Learning
 
-**Group Members:** Obada Alsehli ,(second student abandonned)
+**Group Members:** Obada Alsehli  
 **Date:** January 2026  
 **Course:** Reinforcement Learning Final Project  
-**GitHub:** [Repository Link]
+**GitHub:** [https://github.com/obadaA1/highway-rl-agent](https://github.com/obadaA1/highway-rl-agent)
 
 ---
 
@@ -21,13 +21,16 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 
 ## 🎥 Evolution Video
 
-> **VISUAL PROOF OF LEARNING:** The video below demonstrates the complete training progression from random agent to trained policy.
+> **VISUAL PROOF OF LEARNING:** The videos below demonstrate the complete training progression from random agent to trained policy.
 
-0_steps training: 
-<video width="630" height="300" src="https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_0_steps.mp4" controls></video>
+### Untrained Agent (0 steps)
+https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_0_steps.mp4
 
+### Half-Trained Agent (100k steps)
+https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_100000_steps.mp4
 
-
+### Fully-Trained Agent (200k steps)
+https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_200000_steps.mp4
 
 **Three Training Stages:**
 
@@ -77,43 +80,53 @@ Features per vehicle:
 
 The reward function explicitly balances **speed** and **safety** objectives:
 
-$$
-R(s, a) = R_{\text{speed}} + R_{\text{safe\_distance}} - P_{\text{weaving}} - P_{\text{slow}} - P_{\text{collision}}
-$$
+```math
+R(s, a) = R_{speed} + R_{safe_distance} - P_{weaving} - P_{slow} - P_{collision}
+```
 
 **Component Breakdown:**
 
-$$
-\begin{aligned}
-R_{\text{speed}} &= \frac{v_{\text{ego}}}{v_{\text{max}}} \in [0, 1] \quad \text{(normalized velocity reward)} \\[10pt]
-R_{\text{safe\_distance}} &= \begin{cases} 
-0.05 & \text{if } d_{\text{front}} \geq 15m \text{ and vehicle ahead} \\
+```math
+R_{speed} = \frac{v_{ego}}{v_{max}} \in [0, 1] \quad \text{(normalized velocity reward)}
+```
+
+```math
+R_{safe_distance} = \begin{cases} 
+0.05 & \text{if } d_{front} \geq 15m \text{ and vehicle ahead} \\
 0 & \text{otherwise}
-\end{cases} \\[10pt]
-P_{\text{weaving}} &= \begin{cases}
+\end{cases}
+```
+
+```math
+P_{weaving} = \begin{cases}
 0.08 & \text{if lane change within 10 steps of previous} \\
 0 & \text{otherwise}
-\end{cases} \\[10pt]
-P_{\text{slow}} &= \begin{cases}
-0.02 & \text{if } v_{\text{ego}} < 0.6 \cdot v_{\text{max}} \\
+\end{cases}
+```
+
+```math
+P_{slow} = \begin{cases}
+0.02 & \text{if } v_{ego} < 0.6 \cdot v_{max} \\
 0 & \text{otherwise}
-\end{cases} \\[10pt]
-P_{\text{collision}} &= \begin{cases}
+\end{cases}
+```
+
+```math
+P_{collision} = \begin{cases}
 0.5 & \text{if crashed} \\
 0 & \text{otherwise}
 \end{cases}
-\end{aligned}
-$$
+```
 
 **Design Philosophy:**
 The reward is **positive-dominant** (following `highway-env` best practices) to prevent the agent from preferring early termination over negative accumulation.
 
 **Rubric Compliance:**
-- ✅ "Reward high forward velocity" → $R_{\text{speed}}$ (normalized velocity)
-- ✅ "Penalize collisions" → $P_{\text{collision}}$ (-0.5 at termination)
-- ✅ "Penalize driving too slowly" → $P_{\text{slow}}$ (-0.02 per step if $v < 0.6 v_{\text{max}}$)
-- ✅ "Maintaining safe distances" → $R_{\text{safe\_distance}}$ (+0.05 bonus when $d \geq 15m$)
-- ✅ "Penalize unnecessary lane changes" → $P_{\text{weaving}}$ (only consecutive changes)
+- ✅ "Reward high forward velocity" → `R_speed` (normalized velocity)
+- ✅ "Penalize collisions" → `P_collision` (-0.5 at termination)
+- ✅ "Penalize driving too slowly" → `P_slow` (-0.02 per step if v < 0.6 v_max)
+- ✅ "Maintaining safe distances" → `R_safe_distance` (+0.05 bonus when d ≥ 15m)
+- ✅ "Penalize unnecessary lane changes" → `P_weaving` (only consecutive changes)
 
 ---
 
@@ -127,14 +140,14 @@ The reward is **positive-dominant** (following `highway-env` best practices) to 
 
 **PPO Objective Function:**
 
-$$
-L^{\text{CLIP}}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]
-$$
+```math
+L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t) \right]
+```
 
-Where:
-- $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{\text{old}}}(a_t|s_t)}$ (probability ratio)
-- $\hat{A}_t$ = Generalized Advantage Estimate (GAE)
-- $\epsilon = 0.2$ (clip range)
+**Where:**
+- `r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t)` (probability ratio)
+- `Â_t` = Generalized Advantage Estimate (GAE)
+- `ε = 0.2` (clip range)
 
 ---
 
@@ -274,30 +287,30 @@ The agent learned to "drive like a terrified student driver" — staying in a si
 
 The multi-objective reward function has a critical flaw:
 
-$$
-R_{\text{speed}} \in [0, 1] \quad \text{vs} \quad P_{\text{collision}} = 0.5
-$$
+```math
+R_{speed} \in [0, 1] \quad \text{vs} \quad P_{collision} = 0.5
+```
 
 **Mathematical Analysis:**
 
-For an agent driving at maximum speed ($v = v_{\text{max}}$):
-- Reward per step: $R_{\text{speed}} = 1.0$
-- If crash occurs after $T$ steps: Total reward = $T \cdot 1.0 - 0.5 = T - 0.5$
+For an agent driving at maximum speed (v = v_max):
+- Reward per step: `R_speed = 1.0`
+- If crash occurs after T steps: Total reward = `T × 1.0 - 0.5 = T - 0.5`
 
-For an agent driving slowly ($v = 0.5 v_{\text{max}}$):
-- Reward per step: $R_{\text{speed}} = 0.5 + R_{\text{safe\_distance}} = 0.55$ (with bonus)
-- If survives full episode ($T = 960$ steps): Total reward = $960 \cdot 0.55 = 528$
+For an agent driving slowly (v = 0.5 v_max):
+- Reward per step: `R_speed = 0.5 + R_safe_distance = 0.55` (with bonus)
+- If survives full episode (T = 960 steps): Total reward = `960 × 0.55 = 528`
 
 **Break-Even Analysis:**
 
-Fast driving needs to survive $T > 528$ steps to beat slow driving.
+Fast driving needs to survive `T > 528` steps to beat slow driving.
 At maximum speed, episode timeout is ~480 steps.
 
 **Conclusion:** **The slow-driving strategy is mathematically optimal** under this reward structure because:
 1. Collision penalty (-0.5) is too weak relative to cumulative rewards
 2. Slow driving receives nearly equal per-step rewards (0.5 vs 1.0)
 3. Slow driving dramatically reduces collision risk
-4. Result: $\text{Low Speed} \times \text{Long Survival} > \text{High Speed} \times \text{Short Survival}$
+4. Result: `Low Speed × Long Survival > High Speed × Short Survival`
 
 ---
 
@@ -320,7 +333,7 @@ Penalizes driving below 80% of max speed more heavily.
 ```python
 R_speed = (v / v_max) ** 2  # Quadratic instead of linear
 ```
-Rewards fast driving exponentially: $v=1.0 \to R=1.0$, but $v=0.5 \to R=0.25$.
+Rewards fast driving exponentially: v=1.0 → R=1.0, but v=0.5 → R=0.25.
 
 **Solution 4: Distance-Based Reward**
 ```python
@@ -340,7 +353,7 @@ Combine **Solution 1** (collision penalty = 5.0) with **Solution 3** (quadratic 
 - Agent stays in initial lane regardless of traffic
 
 **Why It Happened:**
-1. **Weaving Penalty Too Aggressive:** $P_{\text{weaving}} = 0.08$ discourages even strategic lane changes
+1. **Weaving Penalty Too Aggressive:** `P_weaving = 0.08` discourages even strategic lane changes
 2. **Observation Limitation:** Agent only sees 5 vehicles; may not observe benefits of lane changes
 3. **Optimal Sub-Policy:** In dense traffic (40 vehicles), staying in one lane and slowing down is safer than weaving
 
