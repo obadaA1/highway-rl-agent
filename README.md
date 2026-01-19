@@ -24,13 +24,19 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 > **VISUAL PROOF OF LEARNING:** The videos below demonstrate the complete training progression from random agent to trained policy.
 
 ### Untrained Agent (0 steps)
-https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_0_steps.mp4
+![Untrained Agent](assets/videos/highway_ppo_0_steps.gif)
+
+*Random actions, immediate crashes. The agent has no learned policy and behaves erratically.*
 
 ### Half-Trained Agent (100k steps)
-https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_100000_steps.mp4
+![Half-Trained Agent](assets/videos/highway_ppo_100000_steps.gif)
+
+*Learned survival through slow driving. Agent successfully avoids crashes by maintaining low speed.*
 
 ### Fully-Trained Agent (200k steps)
-https://github.com/obadaA1/highway-rl-agent/blob/main/assets/videos/highway_ppo_200000_steps.mp4
+![Fully-Trained Agent](assets/videos/highway_ppo_200000_steps.gif)
+
+*Refined slow-driving policy. Consistent survival but exploits reward function by never accelerating.*
 
 **Three Training Stages:**
 

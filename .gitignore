@@ -80,6 +80,9 @@ experiments/
 !assets/videos/highway_ppo_0_steps.mp4
 !assets/videos/highway_ppo_100000_steps.mp4
 !assets/videos/highway_ppo_200000_steps.mp4
+!assets/videos/highway_ppo_0_steps.gif
+!assets/videos/highway_ppo_100000_steps.gif
+!assets/videos/highway_ppo_200000_steps.gif
 !assets/videos/evolution.mp4
 !assets/videos/evolution.gif
 
