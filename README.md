@@ -7,6 +7,36 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [🎯 Project Objective](#-project-objective)
+- [🎥 Evolution Video](#-evolution-video)
+- [📊 Methodology](#-methodology)
+  - [State Space (Observation)](#state-space-observation)
+  - [Action Space](#action-space)
+  - [Reward Function (Multi-Objective V6)](#reward-function-multi-objective-v6)
+  - [Algorithm: Proximal Policy Optimization (PPO)](#algorithm-proximal-policy-optimization-ppo)
+  - [Neural Network Architecture](#neural-network-architecture)
+  - [Hyperparameters](#hyperparameters)
+- [📈 Training Analysis](#-training-analysis)
+  - [Reward Progression](#reward-progression)
+  - [Episode Length Analysis](#episode-length-analysis)
+  - [Training Summary Dashboard](#training-summary-dashboard)
+- [🚨 Challenges & Critical Failure Analysis](#-challenges--critical-failure-analysis)
+  - [MAJOR ISSUE: Degenerate Policy (Reward Exploitation)](#major-issue-degenerate-policy-reward-exploitation)
+  - [Challenge 2: Lane Change Avoidance](#challenge-2-lane-change-avoidance)
+  - [Challenge 3: Limited Diversity in Final Checkpoints](#challenge-3-limited-diversity-in-final-checkpoints)
+- [🎓 Academic Insights & Lessons Learned](#-academic-insights--lessons-learned)
+- [📊 Final Results Summary](#-final-results-summary)
+- [🚀 Future Work](#-future-work)
+- [📁 Repository Structure](#-repository-structure)
+- [🔧 Reproduction Instructions](#-reproduction-instructions)
+- [📚 References](#-references)
+- [📚 Appendix: Development History & Iterative Findings](#-appendix-development-history--iterative-findings)
+- [📝 Conclusion](#-conclusion)
+
+---
+
 ## 🎯 Project Objective
 
 Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** to navigate dense highway traffic while balancing two competing objectives:
