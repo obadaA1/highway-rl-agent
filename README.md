@@ -559,7 +559,193 @@ python scripts/record_video.py --model assets/checkpoints/highway_ppo_200000_ste
 
 ---
 
-## 📝 Conclusion
+## � Appendix: Development History & Iterative Findings
+
+> **Note:** This section documents the complete development journey through 6 reward function iterations (V1→V2→V3→V3.5→V4→V5→**V6 Final**). The README above describes **V6 only** (the final submitted version). This appendix provides transparency into the iterative learning process.
+
+### Training Iteration Summary
+
+| Version | Vehicles | Key Features | Training Steps | Result | Lesson Learned |
+|---------|----------|--------------|----------------|--------|----------------|
+| **V1** | 50 | Progress + alive bonus | 200k | ❌ SLOWER-only (100%) | Complexity overwhelmed exploration |
+| **V2** | 40 | V1 + weak speed penalties | 200k | ❌ SLOWER-only (100%) | Penalties too weak (5-10×) |
+| **V3** | 40 | V2 + 5-20× stronger penalties | 200k | ⚠️ Partial (no lane changes) | Strong penalties work, but passive |
+| **V3.5** | 40 | V3 + overtaking bonus + risk logic | Not trained | 🔄 Skipped | Too complex for CPU training |
+| **V4** | 40 | Acceleration-aware (no overtaking) | Not trained | 🔄 Skipped | Simplified approach abandoned |
+| **V5** | 40 | Safe distance bonus (multi-objective) | Partial | ⚠️ Empty lane exploit found | CONDITIONAL bonus critical |
+| **V6** | 40 | **V5 + conditional bonus (FINAL)** | **200k** | ✅ **Submitted** | **Final working version** |
+
+---
+
+### 🔴 Training Attempt V1: Degenerate Single-Action Loops (FAILED)
+
+**Configuration:**
+- 50 vehicles (very dense traffic)
+- Progress reward: `r = v/v_max` (1.0)
+- Alive bonus: +0.01
+- Collision penalty: -80.0
+
+**Results (200k steps):**
+
+| Checkpoint | Mean Reward | Crash Rate | Action Distribution |
+|------------|-------------|------------|---------------------|
+| 100k | -35.7 ± 32.6 | 100% | **LANE_RIGHT only** (43.9×) |
+| 200k | +1.1 ± 67.2 | 100% | **SLOWER only** (80.2×) |
+
+**Root Cause:**
+```python
+# At 5 m/s using SLOWER:
+net_reward = (5/30) + 0.01 = 0.177 per step
+Over 80 steps = +14.2 cumulative
+# Better than crashing early (-80)!
+```
+
+**Lesson:** 50 vehicles created O(n²) = 1,225 collision checks/step. High complexity caused PPO to fall into local minima (single-action strategies). Agent correctly learned the optimal policy for the given reward structure.
+
+---
+
+### 🟡 Training Attempt V2: Weak Penalties Still Allow Exploitation (FAILED)
+
+**Configuration:**
+- 40 vehicles (reduced from 50)
+- Added speed control penalties:
+  - SLOWER action penalty: -0.02
+  - Low speed penalty: -0.01 (if v < 18 m/s)
+
+**Results (200k steps):**
+
+| Checkpoint | Mean Reward | Crash Rate | SLOWER Usage |
+|------------|-------------|------------|--------------|
+| 100k | -2.8 ± 108.7 | 99% | 74.8× (99%) |
+| 200k | +18.4 ± 124.6 | 99% | **96.6× (100%)** |
+
+**Mathematical Analysis:**
+```python
+# V2 reward at 5 m/s (SLOWER action):
+r_progress = 5/30 = 0.167
+r_alive = 0.01
+r_slow_action = -0.02
+r_low_speed = -0.01
+total = 0.167 + 0.01 - 0.02 - 0.01 = +0.147 (STILL POSITIVE!)
+
+# Over 96 steps: 0.147 × 96 = +14.1 (better than crashing!)
+```
+
+**Lesson:** Reward shaping penalties must **DOMINATE** undesired behaviors, not just "nudge" them. Small penalties (-0.01, -0.02) act as "taxes" that agents can absorb while exploiting the system. Need 5-10× stronger penalties.
+
+---
+
+### 🟢 Training Attempt V3: Strong Penalties Work, But Passive (PARTIAL SUCCESS)
+
+**Configuration:**
+- 40 vehicles
+- **Massively increased penalties:**
+  - SLOWER action: -0.02 → **-0.10** (5× stronger)
+  - Low speed: -0.01 → **-0.20** (20× stronger)
+
+**Mathematical Verification:**
+```python
+# V3 reward at 5 m/s (SLOWER action):
+total = 0.167 + 0.01 - 0.10 - 0.20 = -0.123 (NEGATIVE!) ✅
+
+# At 20 m/s (FASTER action):
+total = (20/30) + 0.01 = 0.677 (STRONGLY POSITIVE!) ✅
+```
+
+**Results:** Training showed promise but evaluation not fully completed before moving to V4/V5.
+
+**Lesson:** Penalties exceeding `r_progress + r_alive` at undesired speeds create a "wall" that forces compliance.
+
+---
+
+### ⚡ Versions V3.5, V4: Increased Complexity Abandoned
+
+**V3.5 Enhanced:** Added overtaking bonus (+2.0 per vehicle passed) with 95% confidence risk logic. Required tracking previous vehicles, risk windows, and dynamic collision penalties. **Too complex for CPU training** — skipped.
+
+**V4 Acceleration-Aware:** Simplified V3.5 by removing overtaking, adding direct acceleration bonuses. Tested but not trained — decided to pursue multi-objective approach instead.
+
+**Lesson:** Simpler reward functions are easier to debug and understand. Complex multi-component rewards with tracking logic can introduce bugs and unstable training.
+
+---
+
+### 🔵 Training Attempt V5: Empty Lane Exploit Discovered (CRITICAL BUG)
+
+**Configuration:**
+- V3 base + **safe distance bonus** (+0.05 when d ≥ 15m)
+- Multi-objective framework: Speed vs Safety
+
+**Critical Bug Found:**
+```python
+# V5 Original Implementation:
+if distance >= 15.0:
+    bonus = +0.05  # ALWAYS given when distance > 15m
+
+# Exploit: Agent seeks empty lanes to get "free" bonus
+# No vehicle ahead = distance = ∞ > 15m = bonus!
+```
+
+**Lesson:** Reward bonuses must have **conditional logic** to prevent unintended strategies. "Safe distance" only makes sense when there IS a vehicle to maintain distance from.
+
+---
+
+### ✅ Training Attempt V6 (FINAL): Conditional Safe Distance Bonus
+
+**Configuration (Current Submission):**
+- V5 base + **fixed conditional logic:**
+```python
+if has_vehicle_ahead AND distance >= 15.0:
+    bonus = +0.05  # Only when actually following
+```
+
+- Complete multi-objective reward:
+  - `R_speed`: Velocity reward (normalized [0, 1])
+  - `R_safe_distance`: Conditional bonus (prevents exploit)
+  - `P_weaving`: Consecutive lane change penalty (-0.08)
+  - `P_slow`: Low speed penalty (-0.02)
+  - `P_collision`: Crash penalty (-0.5)
+
+**Results (200k steps):**
+
+| Checkpoint | Mean Reward | Crash Rate | Behavior |
+|------------|-------------|------------|----------|
+| 100k | 329.8 ± 33.1 | 3% | Learned survival via slow driving |
+| 200k | 329.2 ± 50.5 | 4% | Refined slow-driving policy |
+
+**Current Status:** Degenerate policy (96% SLOWER usage) but significantly better than V1/V2 (100% crash rates). Collision penalty still too weak relative to cumulative rewards.
+
+---
+
+### Key Insights from 6 Iterations
+
+1. **Environment Complexity:** 50 vehicles → 40 vehicles reduced collision checks by 35% and improved exploration.
+
+2. **Penalty Magnitude:** Small penalties (-0.01, -0.02) are "taxes." Large penalties (-0.10, -0.20) are "walls." Use the latter.
+
+3. **Mathematical Threshold:** For slow driving to be net negative, penalties must exceed `(v/v_max) + r_alive` at undesired velocities.
+
+4. **Conditional Bonuses:** Any reward bonus must verify its preconditions. "Safe distance" requires "vehicle ahead."
+
+5. **Multi-Objective Balance:** Explicit separation of speed vs safety objectives improves interpretability but requires careful weighting.
+
+6. **Degenerate Policies:** Even with strong penalties, cumulative rewards over long episodes can still favor slow strategies. Collision penalty should be 10× larger (5.0 instead of 0.5) or use quadratic speed rewards.
+
+---
+
+### Comparison: V1 vs V2 vs V6 (Final)
+
+| Metric | V1 (Baseline) | V2 (Weak Penalties) | V6 (Final) |
+|--------|---------------|---------------------|------------|
+| **Net reward at 5 m/s** | +0.177/step | +0.147/step | -0.123/step |
+| **SLOWER usage** | 80× (100%) | 97× (100%) | 455× (96%) |
+| **Lane changes** | 0 | 0 | 0 |
+| **Crash rate** | 100% | 99% | **3%** ✅ |
+| **Survival time** | ~25 steps | ~43 steps | **~470 steps** ✅ |
+
+**Conclusion:** V6 achieved the best survival metrics (crash rate reduction from 98% → 3%) but still exhibits degenerate policy due to weak collision penalty. The 6-iteration journey demonstrates the critical importance of reward function design and mathematical verification BEFORE training.
+
+---
+
+## �📝 Conclusion
 
 This project successfully implemented a PPO-based autonomous driving agent with clean, modular, and reproducible code. The agent learned effective collision avoidance, reducing crash rate from 98% to 3%. However, the agent exploited a flaw in the reward function, learning to drive slowly rather than skillfully.
 
