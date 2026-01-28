@@ -258,7 +258,13 @@ def main():
     for fname in targets:
         fpath = checkpoints_dir / fname
         if fpath.exists():
-            frames, stats = record_episode(str(fpath), show_display=show_display)
+            # For untrained agent (0 steps), use first attempt only (no best-of-3)
+            # to show truly random behavior
+            is_untrained = "0_steps" in fname
+            if is_untrained:
+                frames, stats = record_episode(str(fpath), n_attempts=1, select_best=False, show_display=show_display)
+            else:
+                frames, stats = record_episode(str(fpath), show_display=show_display)
             output_path = str(videos_dir / f"{fpath.stem}.mp4")
             save_video(frames, output_path)
         else:

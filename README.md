@@ -494,25 +494,25 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 ### Untrained Agent (0 steps)
 ![Untrained Intersection Agent](assets/videos/intersection/intersection_ppo_0_steps.gif)
 
-*Random actions with occasional lucky goal completion. No consistent strategy.*
+*Random actions leading to immediate crash. No learned policy or collision avoidance.*
 
 ### Half-Trained Agent (100k steps)
 ![Half-Trained Intersection Agent](assets/videos/intersection/intersection_ppo_100000_steps.gif)
 
-*Strong goal-directed behavior: consistent safe navigation through intersection. Best performance achieved.*
+*Learning in progress: agent attempts navigation but still crashes. Shows partial understanding of task.*
 
 ### Fully-Trained Agent (200k steps)
 ![Fully-Trained Intersection Agent](assets/videos/intersection/intersection_ppo_200000_steps.gif)
 
-*Overfitting observed: performance degraded compared to 100k checkpoint. Agent became more cautious.*
+*Successful goal completion with safe navigation. However, evaluation shows this was lucky - 200k checkpoint has only 2% success rate (overfitting).*
 
 **Training Stages:**
 
 | Stage | Checkpoint | Behavior | Success Rate | Crash Rate |
 |-------|-----------|----------|--------------|------------|
-| **Untrained** | 0 steps | Random actions, no strategy | ~33% (lucky) | ~50% |
-| **Half-Trained** | 100k steps | Consistent goal-directed navigation | **100%** ✅ | 0% |
-| **Fully-Trained** | 200k steps | Overly cautious, degraded performance | 2% | 15% |
+| **Untrained** | 0 steps | Random actions, immediate crash | 0% | ~100% |
+| **Half-Trained** | 100k steps | Best performance: goal-directed navigation | **100%** (in evals) ✅ | 0% |
+| **Fully-Trained** | 200k steps | Degraded: overly cautious, overfitting | 2% | 15% |
 
 **Key Finding:** The 100k checkpoint significantly outperformed the 200k checkpoint, demonstrating **overfitting** — a critical RL challenge where extended training can degrade performance.
 
