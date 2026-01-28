@@ -31,19 +31,19 @@
 - [📊 Final Results Summary (Highway)](#-final-results-summary)
 
 ### 🚦 Environment 2: Intersection-v1
-- [🎯 Project Objective (Intersection)](#-project-objective-intersection)
+- [🎯 Project Objective (Intersection-v1)](#-project-objective-intersection-v1)
 - [🎥 Evolution Video (Intersection)](#-evolution-video-intersection)
-- [📊 Methodology (Intersection)](#-methodology-intersection)
-  - [State Space (Observation)](#state-space-observation-intersection)
-  - [Action Space](#action-space-intersection)
+- [📊 Methodology (Intersection-v1)](#-methodology-intersection-v1)
+  - [State Space (Observation)](#state-space-observation-1)
+  - [Action Space](#action-space-1)
   - [Reward Function (Goal-Directed Navigation)](#reward-function-goal-directed-navigation)
-  - [Neural Network Architecture](#neural-network-architecture-intersection)
-  - [Hyperparameters](#hyperparameters-intersection)
+  - [Neural Network Architecture](#neural-network-architecture-1)
+  - [Hyperparameters](#hyperparameters-1)
 - [📈 Training Analysis (Intersection)](#-training-analysis-intersection)
-  - [Reward Progression](#reward-progression-intersection)
-  - [Episode Length Analysis](#episode-length-analysis-intersection)
-  - [Training Metrics](#training-metrics-intersection)
-- [🚨 Challenges & Critical Findings (Intersection)](#-challenges--critical-findings-intersection)
+  - [Reward Progression](#reward-progression-1)
+  - [Episode Length](#episode-length)
+  - [Training Metrics](#training-metrics)
+- [🚨 Challenges & Insights (Intersection)](#-challenges--insights-intersection)
   - [Challenge 1: Overfitting Phenomenon](#challenge-1-overfitting-phenomenon)
   - [Challenge 2: Low Goal Success Rate](#challenge-2-low-goal-success-rate)
   - [Challenge 3: Cross-Traffic Learning](#challenge-3-cross-traffic-learning)
@@ -473,7 +473,7 @@ The 100k and 200k checkpoints have nearly identical performance:
 
 ---
 
-## 🎯 Project Objective (Intersection-v0)
+## 🎯 Project Objective (Intersection-v1)
 
 Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** to safely navigate through a traffic intersection. Unlike highway driving, intersection navigation requires:
 1. **Goal-Directed Behavior**: Reach the destination on the other side
@@ -481,7 +481,7 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 3. **Collision Avoidance**: Avoid crashes with vehicles from all directions
 4. **Timely Decision-Making**: Don't stall indefinitely
 
-**Environment:** `intersection-v0` (Gymnasium + highway-env)  
+**Environment:** `intersection-v1` (Gymnasium + highway-env)  
 **Hardware:** NVIDIA GeForce RTX 3050 Laptop GPU (CUDA-accelerated training)  
 **Training Duration:** 200,000 timesteps (~2-3 hours with GPU)
 
@@ -518,7 +518,7 @@ Train an autonomous driving agent using **Proximal Policy Optimization (PPO)** t
 
 ---
 
-## 📊 Methodology (Intersection-v0)
+## 📊 Methodology (Intersection-v1)
 
 ### State Space (Observation)
 
@@ -835,7 +835,7 @@ The overfitting phenomenon provides valuable insight into RL training dynamics.
 ├── assets/
 │   ├── checkpoints/
 │   │   ├── highway/                   # Highway-v0 checkpoints
-│   │   └── intersection/              # Intersection-v0 checkpoints
+│   │   └── intersection/              # Intersection-v1 checkpoints
 │   ├── plots/
 │   │   ├── highway/                   # Highway training plots
 │   │   └── intersection/              # Intersection training plots
@@ -845,14 +845,14 @@ The overfitting phenomenon provides valuable insight into RL training dynamics.
 ├── src/
 │   ├── __init__.py
 │   ├── config.py                      # Highway-v0 configuration
-│   ├── intersection_config.py         # Intersection-v0 configuration (NEW)
+│   ├── intersection_config.py         # Intersection-v1 configuration (NEW)
 │   ├── agent/
 │   │   ├── __init__.py
 │   │   └── ppo_agent.py              # PPO agent (shared)
 │   ├── env/
 │   │   ├── __init__.py
 │   │   ├── highway_env_v6.py         # Highway-v0 wrapper
-│   │   └── intersection_env_v1.py    # Intersection-v0 wrapper (NEW)
+│   │   └── intersection_env_v1.py    # Intersection-v1 wrapper (NEW)
 │   ├── training/
 │   │   ├── __init__.py
 │   │   └── callbacks.py              # Training callbacks (shared)
